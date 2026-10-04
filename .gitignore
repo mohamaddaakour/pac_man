@@ -1,2 +1,11 @@
+__pycache__/
+*.pyc
+.venv/
+.mypy_cache/
+.pytest_cache/
+build/
+dist/
+highscores.json
+
 subject.md
 roadmap/
