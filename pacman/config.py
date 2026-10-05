@@ -1,8 +1,9 @@
 from __future__ import annotations
-from typing import Callable
+from typing import Any, Callable
 
 from dataclasses import dataclass
 import sys
+import math
 
 
 Report = Callable[[str], None]
@@ -71,3 +72,78 @@ def _strip_comments(text: str) -> str:
             lines.append(line)
 
     return "\n".join(lines)
+
+
+def _read_number(
+    raw: dict[str, Any],
+    key: str,
+    label: str,
+    spec: tuple[bool, float, float, float],
+    report: Report
+) -> int | float:
+    """
+    Return `raw[key]` if validated against `spec`, otherwise return a safe fallback.
+
+    Args:
+        raw: Dict that may contain `key`
+        key: Key to look up
+        label: Name shown in messages
+        spec: `(is_int, default, minimum, max)`
+        report: called with one message per fix.
+    
+    Returns:
+        `raw[key]` if validated otherwise return a fallback.
+    """
+
+
+    is_int, default, low, high = spec
+
+    if is_int:
+        fallback: int | float = int(default)
+    else:
+        fallback = float(default)
+
+    if key not in raw:
+        report(f"`{label}` is missing, using instead {fallback}")
+        return fallback
+
+    value = raw[key]
+
+    if is_int:
+        ok_type = (int,)
+    else:
+        ok_type = (int, float)
+    
+    # Check if the value is bool or not double or int
+    if isinstance(value, bool) or not isinstance(value, ok_type):
+        if is_int:
+            wanted: str = "an integer"
+        else:
+            wanted: str = "a number"
+    
+        report(f"`{label}` must be {wanted}, but got {value!r}; "
+           f"using default {fallback}")
+        
+        return fallback
+    
+    # Check if the value is not finite
+    if not math.isfinite(value):
+        report(f"`{label}` must be finite, but got {value!r}; "
+               f"using default {fallback}")
+        
+        return fallback
+    
+    # Building `clamp`
+    # If value is less than minimum `low` the value should take
+    # `low` as value
+    if value < low:
+        report(f"`{label}` is {value}, below minimum; using {low:q}")
+        value = low
+    elif value > high:
+        report(f"`{label}` is {value}, above maximum; using {high:q}")
+        value = high
+    
+    if is_int:
+        return int(value)
+    else:
+        return float(value)
