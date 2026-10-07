@@ -326,7 +326,7 @@ def load_config(path: str | Path, report: Report = _print_report) -> Config:
     """
 
     try:
-        text = Path(path).read_text(encoding="utf-8")
+        text = Path(path).read_text(encoding="utf-8-sig")
     except FileNotFoundError:
         raise ConfigError(f"Config file not found: {path}")
     except (OSError, UnicodeDecodeError) as exc:
@@ -338,6 +338,10 @@ def load_config(path: str | Path, report: Report = _print_report) -> Config:
         raise ConfigError(
             f"{path} is not valid JSON (line {exc.lineno}, "
             f"column {exc.colno}): {exc.msg}")
+    except (ValueError, RecursionError) as exc:
+        raise ConfigError(
+            f"{path}: JSON exceeds parser limits: {exc}"
+        ) from exc
 
     if not isinstance(raw, dict):
         raise ConfigError(f"{path}: top level must be a JSON object")

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 
-class HighScores:
+class Highscores:
     """Top-10 highscores stored on disk."""
 
     def __init__(self, file_name: str) -> None:

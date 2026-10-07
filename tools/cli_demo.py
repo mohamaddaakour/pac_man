@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import sys
-# from pathlib import Path
 
 from pacman.config import ConfigError, load_config
+
 
 def main(argv: list[str]) -> int:
     """Entry point"""
@@ -20,7 +20,7 @@ def main(argv: list[str]) -> int:
     except ConfigError as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return 1
-    
+
     print("Resolved configuration:")
 
     for field, value in vars(config).items():

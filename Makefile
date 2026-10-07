@@ -9,10 +9,10 @@ run:
 	$(PYTHON) pac-man.py $(CONFIG)
 
 demo:
-	$(PYTHON) tools/cli_demo.py $(CONFIG)
+	$(PYTHON) -m tools.cli_demo $(CONFIG)
 
 test:
-	$(PYTHON) -m pytest ./tests/*
+	$(PYTHON) -m pytest -q tests
 
 debug:
 	$(PYTHON) -m pdb pac-man.py $(CONFIG)
