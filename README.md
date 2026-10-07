@@ -13,6 +13,14 @@ A complete Pac-Man game written in Python 3.10+ with a clean, modular architectu
 - Main menu, HUD, pause, game over and victory screens
 - Game core separate from the graphics, so it can be tested and played in a terminal
 
+# Instructions
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+```
+
 ## Run
 
 ```bash

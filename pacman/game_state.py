@@ -3,15 +3,16 @@ from __future__ import annotations
 from pacman.entities import Direction
 from pacman.config import Config
 
+
 class GameState:
     """All mutable state of a running game."""
 
-    status: str # "playing" | "level_won" | "game_won" | "game_over"
+    status: str  # "playing" | "level_won" | "game_won" | "game_over"
 
     score: int
     lives: int
 
-    level: int # 1-based
+    level: int  # 1-based
 
     time_left: float
     invisible: bool

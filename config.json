@@ -1,0 +1,21 @@
+# Pac-Man configuration.  Lines starting with # or // are comments.
+// hello world
+{
+    // Where the top-10 is stored.
+    "highscore_filename": "highscores.json",
+
+    # Level 1 uses a fixed seed; omit "seed" for a random maze.
+    "levels": [
+        {"width": 15, "height": 15, "seed": 42},
+        {"width": 19, "height": 15},
+        {"width": 21, "height": 21}
+    ],
+
+    "lives": 3,
+    "points_per_pacgum": 10,
+    "points_per_super_pacgum": 50,
+    "points_per_ghost": 200,
+    "level_max_time": 90,
+    "edible_duration": 10,
+    "ghost_respawn_time": 5
+}

@@ -6,7 +6,8 @@ from dataclasses import dataclass
 from enum import Enum
 
 # Position data type
-Position = tuple[int, int] # (row, column)
+Position = tuple[int, int]  # (row, column)
+
 
 class Direction(Enum):
     """Four move directions"""
