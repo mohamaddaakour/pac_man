@@ -48,7 +48,7 @@ NUMERIC_KEYS: dict[str, tuple[bool, float, float, float]] = {
 }
 
 DEFAULT_HIGHSCORE_FILENAME = "highscores.json"
-DEFAULT_LEVELS = (LevelSpec(width=15, height=15, seed=42),)
+DEFAULT_LEVELS = (LevelSpec(width=15, height=15, seed=42))
 MIN_SIZE, MAX_SIZE, DEFAULT_SIZE = 5, 99, 15
 KNOWN_KEYS = {"highscore_filename", "levels", *NUMERIC_KEYS}
 KNOWN_LEVEL_KEYS = {"width", "height", "seed"}
@@ -147,3 +147,90 @@ def _read_number(
         return int(value)
     else:
         return float(value)
+
+
+# A seed is used to make randomness reproducible, this means
+# same algorithm + same seed gives same maze.
+def _read_seed(item: dict[str, Any], label: str, report: Report) -> int | None:
+    """Return the seed of a level entry, or `None` for random seed"""
+
+    seed: int | None = item.get("seed")
+
+    if seed is None:
+        return None
+    
+    if isinstance(seed, bool) or not isinstance(seed, int):
+        report(f"`{label}.seed` must be an integer, but got {seed!r}; "
+               f"now we will use a random seed")
+        
+        return None
+    
+    return seed
+
+
+def _read_levels(raw: dict[str, Any], report: Report) -> tuple[LevelSpec, ...]:
+    """Parse the `levels` list, invalid entries are skipped
+    
+    Args:
+        raw: `LevelSpec` instance.
+    """
+
+    # Check if "levels" is a key in `raw`
+    if "levels" not in raw:
+        report("`levels` is missing, we will use the default level list")
+        return DEFAULT_LEVELS
+    
+    value = raw["levels"]
+    
+    size_spec = (True, DEFAULT_SIZE, MIN_SIZE, MAX_SIZE)
+
+    levels: list[LevelSpec] = []
+
+    for index, item in enumerate(value, start=1):
+        label: str = f"level[{index}]"
+
+        if not isinstance(item, dict):
+            report(f"`{label}` must be an object, skipping it")
+            continue
+
+        # Report the unknown level keys
+        # `set(item)` will create a set of dictonary keys
+        for extra in sorted(set(item).difference(KNOWN_LEVEL_KEYS)):
+            report(f"unknown key `{label}.{extra}` ignored")
+        
+        width: int = int(_read_number(item, "width", f"{label}.width"),
+                         size_spec, report)
+        
+        height: int = int(_read_number(item, "height", f"{label}.height",
+                                       size_spec, report))
+        
+        levels.append(LevelSpec(width, height, _read_seed(item, label, report)))
+
+    if not levels:
+        report("`levels` has no usable entry, we will use default level list")
+
+        return DEFAULT_LEVELS
+    
+    return tuple(levels)
+
+
+def _read_filename(raw: dict[str, Any], report: Report) -> str:
+    """Return the highscore filename, if it is unusable return the default
+    highscore file name.
+    """
+
+    value: str | None = raw.get("highscore_filename")
+
+    if value is None:
+        report("`highscore_filename` is missing, we will use default filename "
+               f"`{DEFAULT_HIGHSCORE_FILENAME}`")
+        
+        return DEFAULT_HIGHSCORE_FILENAME
+    
+    if not isinstance(value, str) or not value.strip():
+        report("`highscore_filename` must be a non-empty string, and got "
+               f"{value!r}; we will use default `{DEFAULT_HIGHSCORE_FILENAME}`")
+        
+        return DEFAULT_HIGHSCORE_FILENAME
+    
+    return value.strip()
