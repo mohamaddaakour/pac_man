@@ -88,6 +88,7 @@ def _strip_comments(text: str) -> str:
             index += 1
             continue
 
+        # Check if the starting block is also closed
         if text.startswith("/*", index):
             end = text.find("*/", index + 2)
             if end == -1:

@@ -12,7 +12,7 @@ demo:
 	$(PYTHON) tools/cli_demo.py $(CONFIG)
 
 test:
-	$(PYTHON) -m pytest -q
+	$(PYTHON) -m pytest ./tests/*
 
 debug:
 	$(PYTHON) -m pdb pac-man.py $(CONFIG)

@@ -24,5 +24,8 @@ python -m pip install -r requirements.txt
 ## Run
 
 ```bash
+# Run the demo
+python3 -m tools.cli_demo config.json
+
 python3 pac-man.py config.json
 ```
