@@ -54,7 +54,13 @@ def is_walkable(grid: Grid, pos: Position) -> bool:
 def choose_spawns(
     grid: Grid,
 ) -> tuple[Position, tuple[Position, ...]]:
-    """Pick a center player and distinct TL, TR, BL, BR ghost positions."""
+    """Pick a center player and distinct TL, TR, BL, BR ghost positions.
+    choose 5 distinct floor tiles: one for the player (near the center)
+    and one for each ghost (near the four corners).
+
+    Returns:
+        (player_position, (ghost1, ghost2, ghost3, ghost4))
+    """
 
     if (
         not grid
@@ -68,6 +74,7 @@ def choose_spawns(
     rows = len(grid)
     cols = len(grid[0])
 
+    # Create a set of available positions
     available = {
         (row, col)
         for row in range(rows)
@@ -81,8 +88,11 @@ def choose_spawns(
         )
 
     def take_nearest(target: Position) -> Position:
-        """Choose by Manhattan distance, then row/column, and reserve."""
+        """Choose by Manhattan distance the free floor tile
+        closest to this target spot.
+        """
 
+        # Choose the nearest position
         chosen = min(
             available,
             key=lambda pos: (
@@ -93,9 +103,11 @@ def choose_spawns(
         )
 
         available.remove(chosen)
+
         return chosen
 
-    # Player closest to center.
+    # Get the position the nearest to the center to put pacman
+    # in it.
     player = take_nearest(
         (rows // 2, cols // 2)
     )
@@ -108,6 +120,7 @@ def choose_spawns(
         (rows - 1, cols - 1),
     )
 
+    # Take the corner positions to put the ghosts
     ghosts = tuple(
         take_nearest(corner)
         for corner in corners
