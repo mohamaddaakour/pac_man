@@ -97,7 +97,7 @@ def main(argv: list[str]) -> int:
 
     print(
         "Legend: # wall, P player, "
-        "1–4 ghosts (TL, TR, BL, BR)"
+        "1-4 ghosts (TL, TR, BL, BR)"
     )
 
     print(

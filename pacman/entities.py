@@ -1,4 +1,4 @@
-"""Directions and entitie."""
+"""Directions, entities, and grid helpers."""
 
 from __future__ import annotations
 

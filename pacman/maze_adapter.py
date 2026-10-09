@@ -8,7 +8,11 @@ from mazegenerator import MazeGenerator
 from pacman.config import MAX_SIZE, MIN_SIZE
 
 Grid = list[list[int]]
+
+# (row, col)
 Position = tuple[int, int]
+
+# One initial attempt plus up to five retries.
 MAX_ATTEMPTS = 6
 
 # The largest signed int
@@ -19,31 +23,30 @@ class MazeError(Exception):
     """Maze generation failed."""
 
 
-def _convert_cells(cells: list[list[int]], width: int, height: int) -> Grid:
+def _convert_cells(cells: object, width: int, height: int) -> Grid:
     """Create the map grid.
-    
+
     Returns:
         `grid` where every 0's are the floor where pacman and ghosts can move
         and 1's are the walls
     """
     if not isinstance(cells, list) or len(cells) != height:
         raise MazeError("Generator returned the wrong number of rows")
-    
+
     masks: list[list[int]] = []
 
     for row in cells:
         if not isinstance(row, list) or len(row) != width:
-            raise MazeError("Generator returned the wrong sized of row")
-        
+            raise MazeError("Generator returned the wrong row width")
+
         checked: list[int] = []
 
-
         for mask in row:
-            if type(mask) != int or not 0 <= mask <= 15:
+            if type(mask) is not int or not 0 <= mask <= 15:
                 raise MazeError("Wall masks must be integers from 0 to 15")
-            
+
             checked.append(mask)
-        
+
         masks.append(checked)
 
     for row in range(height):
@@ -58,16 +61,16 @@ def _convert_cells(cells: list[list[int]], width: int, height: int) -> Grid:
                 row == height - 1 and not mask & 4
             ):
                 raise MazeError("Exterior north/south wall is open")
-            
+
             if (
-                # Check are we in the first col and the east wall missing
+                # Check are we in the first col and the west wall missing
                 col == 0 and not mask & 8
             ) or (
-                # Check are we in the bottom col and the west wall missing
+                # Check are we in the bottom col and the east wall missing
                 col == width - 1 and not mask & 2
             ):
                 raise MazeError("Generator opened an exterior east/west wall")
-            
+
             # East/West neighboring walls must agree.
             if col + 1 < width:
                 if bool(mask & 2) != bool(masks[row][col + 1] & 8):
@@ -77,7 +80,7 @@ def _convert_cells(cells: list[list[int]], width: int, height: int) -> Grid:
             if row + 1 < height:
                 if bool(mask & 4) != bool(masks[row + 1][col] & 1):
                     raise MazeError("Neighboring north/south walls disagree")
-                
+
     # Convert logical maze cells into game tiles, all slots with 1's.
     grid = [
         [1] * (2 * width + 1)
@@ -97,11 +100,11 @@ def _convert_cells(cells: list[list[int]], width: int, height: int) -> Grid:
 
             grid[tile_row][tile_col] = 0
 
-            # For the last cell in the column there is an east wall open so we have to make it 0
+            # An open east wall connects to the next cell.
             if col + 1 < width and not mask & 2:
                 grid[tile_row][tile_col + 1] = 0
 
-            # For the last cell in the row there is an south wall open so we have to make it 0
+            # An open south wall connects to the next cell.
             if row + 1 < height and not mask & 4:
                 grid[tile_row + 1][tile_col] = 0
 
@@ -112,23 +115,22 @@ def is_connected(grid: Grid) -> bool:
     """Check if we can walk from any floor tile to any other floor tile"""
     if not grid or not grid[0]:
         return False
-    
+
     # Get number of rows and cols
     rows: int = len(grid)
     cols: int = len(grid[0])
 
-    # Check if it is a square map
-    for row in grid:
-        if len(row) != cols:
+    # Check that the map is rectangular.
+    for tiles in grid:
+        if len(tiles) != cols:
             return False
-    
+
     # Check if tile is validated (int and between 0 and 1)
-    for row in grid:
-        for tile in row:
+    for tiles in grid:
+        for tile in tiles:
             if type(tile) is not int or tile not in (0, 1):
                 return False
-            
-    
+
     corridors = {
         (row, col)
         for row in range(rows)
@@ -205,12 +207,14 @@ def build_grid(width: int, height: int, seed: int | None) -> Grid:
         raise MazeError("Seed must be an integer or None")
 
     retry_rng = random.Random(seed)
+
+    # Use OS randomness when no seed is provided.
     random_seed = random.SystemRandom()
 
     if seed is None:
         attempt_seed = random_seed.randint(1, MAX_SEED)
     else:
-        # In case the seed is negative, this will happens: 1 + (--42 % MAX_SEED) = 1 + 42
+        # The external package randomizes seeds <= 0; normalize them.
         attempt_seed = seed if seed > 0 else 1 + (-seed % MAX_SEED)
 
     last_error: Exception | None = None

@@ -6,7 +6,7 @@ install:
 	$(PYTHON) -m pip install -r requirements.txt
 
 run:
-	$(PYTHON) pac-man.py $(CONFIG)
+	$(PYTHON) -m pacman.main $(CONFIG)
 
 demo:
 	$(PYTHON) -m tools.cli_demo $(CONFIG)
@@ -15,7 +15,7 @@ test:
 	$(PYTHON) -m pytest -q tests
 
 debug:
-	$(PYTHON) -m pdb pac-man.py $(CONFIG)
+	$(PYTHON) -m pdb -m pacman.main $(CONFIG)
 
 clean:
 	find . -type d \( -name __pycache__ -o -name .mypy_cache -o -name .pytest_cache \) -prune -exec rm -rf {} +

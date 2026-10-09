@@ -1,9 +1,9 @@
-from maze_adapter import _convert_cells
+"""Run the current Phase 2 terminal demo."""
 
-def main() -> None:
-    """Entry point for pac-man game."""
-    print(_convert_cells([[13, 7, 15]], 3, 1))
+import sys
+
+from tools.cli_demo import main
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main(sys.argv))
