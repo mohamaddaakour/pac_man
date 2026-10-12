@@ -40,7 +40,7 @@ class Entity:
 
 
 class GhostState(Enum):
-    """The ghost's collision state; movement AI comes in phase 5."""
+    """The ghost's collision and movement state."""
 
     NORMAL = "normal"
     EDIBLE = "edible"
@@ -49,10 +49,11 @@ class GhostState(Enum):
 
 @dataclass
 class Ghost(Entity):
-    """An entity with collision state and an eaten respawn countdown."""
+    """An entity with collision, respawn, and movement timing state."""
 
     state: GhostState = GhostState.NORMAL
     respawn_timer: float = 0.0
+    movement_elapsed: float = 0.0
 
 
 def is_walkable(grid: Grid, pos: Position) -> bool:

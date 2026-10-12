@@ -16,10 +16,11 @@ and lets you play the first level in the terminal, collecting pellets for points
 - Ghost collisions, life loss, entity respawns, and 2 seconds of grace
 - Timed edible ghosts, ghost scoring, and eaten-ghost respawns
 - Invisibility toggle and a graphical integration demo
+- Moving ghosts with BFS chasing, random junction choices, and slower fleeing
 
-Ghosts remain stationary in phase 4, but normal contacts now cost a life.
-Ghost AI, the level countdown, level progression, and highscores come in later
-core phases. Power, grace, and ghost respawn timers are active now.
+Ghosts now move in phase 5, and normal contacts cost a life.
+The level countdown, level progression, and highscores come in later core phases.
+Power, grace, and ghost respawn timers are active now.
 
 ## Maze generation and spawns
 
@@ -118,9 +119,34 @@ the graphical demo. The invisibility command itself consumes no terminal time.
 
 Edible ghosts are blue in the graphical demo. Eaten ghosts are hidden in both
 demos. The terminal exits on game over; the graphical demo displays the result
-until Esc or Q closes it. Same-tile and swapped-tile contacts are supported;
-ghost movement will be introduced in phase 5. Lethal last-life contact takes
+until Esc or Q closes it. Same-tile and swapped-tile contacts are supported.
+Lethal last-life contact takes
 priority over consuming the final pellet.
+
+## Phase 5 moving ghosts
+
+All four ghosts use BFS corridor distances to chase the player's current tile.
+At junctions they choose the shortest allowed move in a 70% branch and a random
+allowed move otherwise. The random branch can also choose the shortest move.
+Ghosts avoid reversing while another exit is available and can reverse at dead
+ends. Edible ghosts choose the allowed neighbor farthest from the player by BFS
+distance; the no-reversal rule can force them closer in a narrow corridor.
+
+The player moves every 0.15 seconds, normal ghosts every 0.20 seconds, and edible
+ghosts every 0.30 seconds. Each ghost has an independent movement clock. Eaten
+ghosts wait for their respawn timer and start a fresh movement interval when they
+return. Power changes and life-loss resets also restart movement intervals.
+
+Ghosts move even when the player is stopped. The terminal advances both player
+and ghost simulation time with each movement/Enter command; the graphical demo
+advances continuously. Use I to observe pursuit while protected from damage.
+The core checks a player's arrival contact before a ghost can move away and
+shares one BFS distance map among ghosts due at the same event.
+
+Ghost decisions use a separate random generator. A fixed level seed and the same
+timed input sequence reproduce decisions within the same runtime; omitted seeds
+request fresh randomness. Level progression and the level countdown remain for
+phase 6.
 
 ## Check the code
 

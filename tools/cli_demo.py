@@ -46,7 +46,7 @@ def main(argv: list[str]) -> int:
 
     print('WASD + Enter: turn; Enter: continue; i: invisibility; q: quit.')
     print('Each accepted command advances 0.15 simulated seconds.')
-    print('Ghosts are stationary; normal ghosts cost a life on contact.')
+    print('Ghosts chase normally and flee when edible; I prevents damage.')
     print('Legend: # wall, . pacgum, O super-pacgum, P player, 1–4 ghosts.')
     print('e = edible ghost; eaten ghosts disappear until they respawn.')
     print(f'Tile grid: {len(state.grid)} rows x {len(state.grid[0])} columns')

@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import math
+import random
 
 from pacman.entities import (
     Direction, Entity, Ghost, GhostState, Position, choose_spawns, is_walkable,
 )
 from pacman.maze_adapter import build_grid
+from pacman.ghost_ai import choose_direction, distance_map
 from pacman.config import Config
 
 
@@ -26,6 +28,8 @@ class GameState:
     # Moving one tile per frame would make fast computers run the game faster.
     # Using time makes the speed the same everywhere.
     STEP_TIME = 0.15
+    GHOST_STEP_TIME = 0.20
+    EDIBLE_STEP_TIME = 0.30
 
     # After you lose a life, you’re protected for 2 seconds.
     GRACE_DURATION = 2.0
@@ -52,6 +56,7 @@ class GameState:
         self.edible_timer = 0.0
         self.grace_timer = 0.0
         spec = config.levels[0]
+        self._ghost_rng = random.Random(spec.seed)
         self.grid = build_grid(spec.width, spec.height, spec.seed)
         player_spawn, ghost_spawns = choose_spawns(self.grid)
         self.player_spawn = player_spawn
@@ -105,6 +110,10 @@ class GameState:
 
         while remaining > 0:
             deadlines = [self.STEP_TIME - self._movement_elapsed]
+            deadlines.extend(
+                self._ghost_step_time(ghost) - ghost.movement_elapsed
+                for ghost in self.ghosts if ghost.state != GhostState.EATEN
+            )
 
             deadlines.extend(timer for timer in (
                 self.edible_timer, self.grace_timer,
@@ -121,7 +130,12 @@ class GameState:
             if self._movement_elapsed + EPSILON >= self.STEP_TIME:
                 self._movement_elapsed = 0.0
                 self._move_one_tile()
+                # Resolve entering a ghost tile before it can move away.
+                if self._resolve_collisions(old_player, old_ghosts):
+                    return
 
+            # Keep the pre-event snapshots for swapped-tile detection.
+            self._move_ghosts()
             if self._resolve_collisions(old_player, old_ghosts):
                 return
 
@@ -135,6 +149,9 @@ class GameState:
         self.edible_timer = countdown(self.edible_timer, dt)
         self.grace_timer = countdown(self.grace_timer, dt)
         for ghost in self.ghosts:
+            previous_state = ghost.state
+            if ghost.state != GhostState.EATEN:
+                ghost.movement_elapsed += dt
             if ghost.state == GhostState.EATEN:
                 ghost.respawn_timer = countdown(ghost.respawn_timer, dt)
                 if ghost.respawn_timer == 0:
@@ -144,6 +161,36 @@ class GameState:
                     )
             elif self.edible_timer == 0:
                 ghost.state = GhostState.NORMAL
+            if ghost.state != previous_state:
+                # Start a fresh interval after power expiry or respawn.
+                ghost.movement_elapsed = 0.0
+
+    def _ghost_step_time(self, ghost: Ghost) -> float:
+        """Edible ghosts move slower than normal ghosts."""
+        return (self.EDIBLE_STEP_TIME if ghost.state == GhostState.EDIBLE
+                else self.GHOST_STEP_TIME)
+
+    def _move_ghosts(self) -> None:
+        """Move due ghosts once, sharing one BFS for this event."""
+        due = [
+            ghost for ghost in self.ghosts
+            if ghost.state != GhostState.EATEN and (
+                ghost.movement_elapsed + EPSILON
+                >= self._ghost_step_time(ghost)
+            )
+        ]
+        if not due:
+            return
+        distances = distance_map(self.grid, self.player.pos)
+        for ghost in due:
+            ghost.movement_elapsed = 0.0
+            direction = choose_direction(
+                self.grid, ghost, distances, self._ghost_rng
+            )
+            if direction is not None:
+                row, col = ghost.pos
+                ghost.pos = row + direction.dr, col + direction.dc
+                ghost.direction = direction
 
     def _move_one_tile(self) -> None:
         """Try a buffered turn, otherwise keep going straight or stop."""
@@ -184,6 +231,8 @@ class GameState:
 
             for ghost in self.ghosts:
                 if ghost.state != GhostState.EATEN:
+                    if ghost.state != GhostState.EDIBLE:
+                        ghost.movement_elapsed = 0.0
                     ghost.state = GhostState.EDIBLE
 
     def _resolve_collisions(
@@ -212,6 +261,7 @@ class GameState:
                 ghost.respawn_timer = self.config.ghost_respawn_time
                 ghost.pos = self.ghost_spawns[index]
                 ghost.direction = None
+                ghost.movement_elapsed = 0.0
         return False
 
     def _lose_life(self) -> None:
@@ -228,6 +278,7 @@ class GameState:
             ghost.direction = None
             ghost.state = GhostState.NORMAL
             ghost.respawn_timer = 0.0
+            ghost.movement_elapsed = 0.0
 
         self.grace_timer = self.GRACE_DURATION
 

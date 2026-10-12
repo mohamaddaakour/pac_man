@@ -1,4 +1,4 @@
-"""Simple graphical phase 4 demo using the existing frontend window wrapper."""
+"""Simple graphical phase 5 demo using the existing frontend window wrapper."""
 
 from __future__ import annotations
 
@@ -46,7 +46,7 @@ def circle(window: Window, size: int, radius: float, color: Color) -> Image:
 
 
 class GraphicalDemo:
-    """Connect keyboard and frame callbacks to the phase 4 game core."""
+    """Connect keyboard and frame callbacks to the phase 5 game core."""
 
     def __init__(self, window: Window, state: GameState) -> None:
         """Calculate layout and build all image buffers before the loop."""
@@ -163,7 +163,7 @@ def main(argv: list[str]) -> int:
     path = argv[1] if len(argv) > 1 else 'config.json'
     try:
         state = GameState(load_config(path))
-        with Window(WIDTH, HEIGHT, 'Pac-Man — Phase 4') as window:
+        with Window(WIDTH, HEIGHT, 'Pac-Man — Phase 5') as window:
             GraphicalDemo(window, state)
             window.run()
     except (ConfigError, MazeError, GraphicsError, OSError) as exc:
