@@ -39,6 +39,22 @@ class Entity:
     direction: Direction | None = None
 
 
+class GhostState(Enum):
+    """The ghost's collision state; movement AI comes in phase 5."""
+
+    NORMAL = "normal"
+    EDIBLE = "edible"
+    EATEN = "eaten"
+
+
+@dataclass
+class Ghost(Entity):
+    """An entity with collision state and an eaten respawn countdown."""
+
+    state: GhostState = GhostState.NORMAL
+    respawn_timer: float = 0.0
+
+
 def is_walkable(grid: Grid, pos: Position) -> bool:
     """Check if the position is walkable or not"""
 

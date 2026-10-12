@@ -13,10 +13,13 @@ and lets you play the first level in the terminal, collecting pellets for points
 - Playable ASCII maze with WASD controls and buffered turns
 - Normal and super-pacgum scoring using configured point values
 - Level completion when all pellets are eaten
+- Ghost collisions, life loss, entity respawns, and 2 seconds of grace
+- Timed edible ghosts, ghost scoring, and eaten-ghost respawns
+- Invisibility toggle and a graphical integration demo
 
-Ghost collisions, edible behavior, AI, timers, level progression, and highscores
-are implemented in later core phases. The phase 3 demo uses stationary,
-harmless ghosts; lives and the level timer do not decrease.
+Ghosts remain stationary in phase 4, but normal contacts now cost a life.
+Ghost AI, the level countdown, level progression, and highscores come in later
+core phases. Power, grace, and ghost respawn timers are active now.
 
 ## Maze generation and spawns
 
@@ -50,6 +53,7 @@ occupy all other corridors except the player's starting tile.
 The demo plays the first configured level: `#` is a wall, `.` is a normal pellet,
 `O` is a super-pacgum, `P` is the player, and `1` to `4` are ghosts in corner
 order. Ghost markers cover the super-pacgums at their starting positions.
+Edible ghosts use `e`; eaten ghosts are hidden until they respawn.
 
 # Instructions
 
@@ -67,9 +71,12 @@ python -m tools.cli_demo config.json
 
 # Same playable demo through the project entry point
 python -m pacman.main config.json
+
+# Graphical demo: WASD without Enter, I toggles invisibility, Esc/Q quits
+make graphical-demo
 ```
 
-## Phase 3 controls and scoring
+## Movement controls and scoring
 
 Type `w`, `a`, `s`, or `d`, followed by Enter, to request a direction. Press Enter
 alone to continue moving. Each accepted command advances 0.15 simulated seconds,
@@ -82,12 +89,38 @@ straight and turns at the first tile where the requested direction is possible.
 
 Normal pellets award `points_per_pacgum`; super-pacgums award
 `points_per_super_pacgum`. Each pellet is removed when eaten and scores only once.
-Walking onto a ghost's starting tile collects its super-pacgum without losing a
-life in this phase. Super-pacgums do not yet make ghosts edible.
+Walking onto a ghost's starting tile consumes its super-pacgum before resolving
+contact, making that ghost edible and allowing it to be eaten for points.
 
 When both pellet sets are empty, the core sets `status` to `level_won`, freezes
 movement, and the demo prints a completion message and exits. Automatic progression
 to the next level comes in phase 6.
+
+## Phase 4 collisions and invisibility
+
+A normal ghost costs one life on contact unless invisibility or grace protects
+the player. Multiple simultaneous contacts cost at most one life. Losing a life
+resets the player and ghosts to their starting positions and clears movement and
+power. Score and already eaten pellets remain unchanged. A surviving player gets
+2 seconds of grace; losing the last life sets `game_over` and freezes movement.
+
+Super-pacgums refresh power to `edible_duration` seconds. Active ghosts become
+edible; eating one awards `points_per_ghost`, makes it inactive, and teleports it
+to its corner. It returns after `ghost_respawn_time`, edible if power remains
+and normal otherwise. Inactive ghosts cannot hurt the player or score again
+until they return. A new power-up does not revive them early.
+
+Use `i` followed by Enter in the terminal, or I in the graphical demo, to toggle
+invisibility. This prevents normal-ghost damage while permitting pellet and
+edible-ghost scoring. The HUD shows invisibility, power time, and grace time.
+Timers advance in simulated seconds in the terminal and elapsed frame time in
+the graphical demo. The invisibility command itself consumes no terminal time.
+
+Edible ghosts are blue in the graphical demo. Eaten ghosts are hidden in both
+demos. The terminal exits on game over; the graphical demo displays the result
+until Esc or Q closes it. Same-tile and swapped-tile contacts are supported;
+ghost movement will be introduced in phase 5. Lethal last-life contact takes
+priority over consuming the final pellet.
 
 ## Check the code
 

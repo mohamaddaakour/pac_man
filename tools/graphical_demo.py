@@ -1,4 +1,4 @@
-"""Simple graphical phase 3 demo using the existing frontend window wrapper."""
+"""Simple graphical phase 4 demo using the existing frontend window wrapper."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ import sys
 
 from frontend.window import KEY_ESCAPE, GraphicsError, Image, KeyEvent, Window
 from pacman.config import ConfigError, load_config
-from pacman.entities import Direction, Position
+from pacman.entities import Direction, GhostState, Position
 from pacman.game_state import GameState
 from pacman.maze_adapter import MazeError
 
@@ -46,7 +46,7 @@ def circle(window: Window, size: int, radius: float, color: Color) -> Image:
 
 
 class GraphicalDemo:
-    """Connect keyboard and frame callbacks to the phase 3 game core."""
+    """Connect keyboard and frame callbacks to the phase 4 game core."""
 
     def __init__(self, window: Window, state: GameState) -> None:
         """Calculate layout and build all image buffers before the loop."""
@@ -88,6 +88,9 @@ class GraphicalDemo:
             for color in ((255, 65, 75), (255, 145, 205),
                           (65, 220, 245), (255, 165, 65))
         ]
+        self.edible_ghost = circle(
+            window, size, max(0.8, size * 0.40), (60, 130, 255)
+        )
         window.on_key(self.on_key)
         window.on_close(window.close)
         window.on_frame(self.on_frame)
@@ -97,6 +100,8 @@ class GraphicalDemo:
         key = event.typed_character.lower()
         if event.key_code == KEY_ESCAPE or key == 'q':
             self.window.close()
+        elif key == 'i':
+            self.state.toggle_invisibility()
         elif key in KEYS:
             self.state.set_direction(KEYS[key])
 
@@ -120,6 +125,10 @@ class GraphicalDemo:
         for pos in self.state.super_pacgums:
             self.draw_at(self.super_dot, pos)
         for image, ghost in zip(self.ghosts, self.state.ghosts):
+            if ghost.state == GhostState.EATEN:
+                continue
+            if ghost.state == GhostState.EDIBLE:
+                image = self.edible_ghost
             self.draw_at(image, ghost.pos)
         self.draw_at(self.player, self.state.player.pos)
         remaining = len(self.state.pacgums) + len(self.state.super_pacgums)
@@ -130,13 +139,18 @@ class GraphicalDemo:
         )
         self.window.put_text(
             MARGIN, 38,
-            'WASD: move   Esc / Q: quit   Ghosts are harmless', WHITE,
+            'WASD: move   I: invisibility   Esc / Q: quit', WHITE,
         )
-        message = (
-            'Level complete! Esc / Q to close.'
-            if self.state.status == 'level_won'
-            else 'Phase 3: collect all dots and corner super-pacgums.'
-        )
+        if self.state.status == 'level_won':
+            message = 'Level complete! Esc / Q to close.'
+        elif self.state.status == 'game_over':
+            message = 'Game over! Esc / Q to close.'
+        else:
+            message = (
+                f'Invisible: {self.state.invisible}   '
+                f'Power: {self.state.edible_timer:.1f}s   '
+                f'Grace: {self.state.grace_timer:.1f}s'
+            )
         self.window.put_text(MARGIN, 66, message, WHITE)
 
 
@@ -149,7 +163,7 @@ def main(argv: list[str]) -> int:
     path = argv[1] if len(argv) > 1 else 'config.json'
     try:
         state = GameState(load_config(path))
-        with Window(WIDTH, HEIGHT, 'Pac-Man — Phase 3') as window:
+        with Window(WIDTH, HEIGHT, 'Pac-Man — Phase 4') as window:
             GraphicalDemo(window, state)
             window.run()
     except (ConfigError, MazeError, GraphicsError, OSError) as exc:

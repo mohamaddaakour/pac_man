@@ -5,7 +5,7 @@ from __future__ import annotations
 import sys
 
 from pacman.config import ConfigError, load_config
-from pacman.entities import Direction
+from pacman.entities import Direction, GhostState
 from pacman.game_state import GameState
 from pacman.maze_adapter import MazeError
 
@@ -26,7 +26,10 @@ def render_ascii(state: GameState) -> str:
         canvas[row][col] = 'O'
     for number, ghost in enumerate(state.ghosts, start=1):
         row, col = ghost.pos
-        canvas[row][col] = str(number)
+        if ghost.state != GhostState.EATEN:
+            canvas[row][col] = (
+                'e' if ghost.state == GhostState.EDIBLE else str(number)
+            )
     row, col = state.player.pos
     canvas[row][col] = 'P'
     return '\n'.join(''.join(row) for row in canvas)
@@ -41,29 +44,39 @@ def main(argv: list[str]) -> int:
         print(f'Error: {exc}', file=sys.stderr)
         return 1
 
-    print('WASD + Enter: turn; Enter: continue; q: quit.')
+    print('WASD + Enter: turn; Enter: continue; i: invisibility; q: quit.')
     print('Each accepted command advances 0.15 simulated seconds.')
-    print('Ghosts are stationary and harmless in phase 3.')
+    print('Ghosts are stationary; normal ghosts cost a life on contact.')
     print('Legend: # wall, . pacgum, O super-pacgum, P player, 1–4 ghosts.')
-    print('Ghosts cover their starting super-pacgums until you visit them.')
+    print('e = edible ghost; eaten ghosts disappear until they respawn.')
     print(f'Tile grid: {len(state.grid)} rows x {len(state.grid[0])} columns')
     try:
         while True:
             print(render_ascii(state))
+            remaining = len(state.pacgums) + len(state.super_pacgums)
             print(
                 f'Score: {state.score} | Lives: {state.lives} | '
-                f'Remaining: {len(state.pacgums) + len(state.super_pacgums)}'
+                f'Remaining: {remaining} | '
+                f'Invisible: {state.invisible} | '
+                f'Power: {state.edible_timer:.1f}s '
+                f'| Grace: {state.grace_timer:.1f}s'
             )
             if state.status == 'level_won':
                 print('Level complete! Level progression comes in phase 6.')
                 return 0
-            command = input('Move [w/a/s/d, Enter, q]: ').strip().lower()
+            if state.status == 'game_over':
+                print('Game over!')
+                return 0
+            command = input('Move [w/a/s/d, Enter, i, q]: ').strip().lower()
             if command == 'q':
                 return 0
+            if command == 'i':
+                state.toggle_invisibility()
+                continue  # Toggling the cheat does not consume time.
             if command in KEYS:
                 state.set_direction(KEYS[command])
             elif command:
-                print('Use w, a, s, d, Enter, or q.')
+                print('Use w, a, s, d, Enter, i, or q.')
                 continue  # Invalid input does not advance simulation time.
             state.update(state.STEP_TIME)
     except (EOFError, KeyboardInterrupt):
