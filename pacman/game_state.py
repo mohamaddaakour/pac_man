@@ -64,6 +64,8 @@ class GameState:
         self.player = Entity(player_spawn)
         self.ghosts = [Ghost(pos) for pos in ghost_spawns]
         self.next_direction: Direction | None = None
+
+        # `_movement_elapsed` is a stopwatch of how long Pac-Man has waited since his last step.
         self._movement_elapsed = 0.0
 
         self.super_pacgums = set(ghost_spawns)
@@ -109,7 +111,9 @@ class GameState:
         remaining = dt
 
         while remaining > 0:
+            # Time until Pac-Man’s next step.
             deadlines = [self.STEP_TIME - self._movement_elapsed]
+
             deadlines.extend(
                 self._ghost_step_time(ghost) - ghost.movement_elapsed
                 for ghost in self.ghosts if ghost.state != GhostState.EATEN
@@ -121,6 +125,7 @@ class GameState:
             ) if timer > 0)
 
             elapsed = min(remaining, *deadlines)
+
             self._advance_timers(elapsed)
             self._movement_elapsed += elapsed
             remaining = max(0.0, remaining - elapsed)
@@ -148,6 +153,7 @@ class GameState:
         """Expire power/grace and return eaten ghosts to their corner state."""
         self.edible_timer = countdown(self.edible_timer, dt)
         self.grace_timer = countdown(self.grace_timer, dt)
+
         for ghost in self.ghosts:
             previous_state = ghost.state
             if ghost.state != GhostState.EATEN:
@@ -179,9 +185,12 @@ class GameState:
                 >= self._ghost_step_time(ghost)
             )
         ]
+
         if not due:
             return
+
         distances = distance_map(self.grid, self.player.pos)
+
         for ghost in due:
             ghost.movement_elapsed = 0.0
             direction = choose_direction(
@@ -239,8 +248,11 @@ class GameState:
         self, old_player: Position, old_ghosts: tuple[Position, ...],
     ) -> bool:
         """Resolve shared or swapped tiles; return True after losing a life."""
+        # A ghost counts as touching if it’s not eaten and
+        # either it shares Pac-Man’s tile, or they swapped tiles this step.
         contacts = [
             (index, ghost) for index, (ghost, previous)
+            # `zip` pairs each ghost with its previous position, and `enumerate` adds its index.
             in enumerate(zip(self.ghosts, old_ghosts))
             if ghost.state != GhostState.EATEN and (
                 ghost.pos == self.player.pos or (
@@ -248,12 +260,14 @@ class GameState:
                 )
             )
         ]
+
         # A dangerous contact costs at most one life, even with several ghosts.
         if not self.invisible and self.grace_timer == 0 and any(
             ghost.state == GhostState.NORMAL for _, ghost in contacts
         ):
             self._lose_life()
             return True
+
         for index, ghost in contacts:
             if ghost.state == GhostState.EDIBLE:
                 self.score += self.config.points_per_ghost
@@ -262,6 +276,7 @@ class GameState:
                 ghost.pos = self.ghost_spawns[index]
                 ghost.direction = None
                 ghost.movement_elapsed = 0.0
+
         return False
 
     def _lose_life(self) -> None:

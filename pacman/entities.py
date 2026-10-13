@@ -52,7 +52,11 @@ class Ghost(Entity):
     """An entity with collision, respawn, and movement timing state."""
 
     state: GhostState = GhostState.NORMAL
+
+    # The time a ghost need to respawn
     respawn_timer: float = 0.0
+
+    # the time a ghost need to move
     movement_elapsed: float = 0.0
 
 
