@@ -16,7 +16,12 @@ EPSILON = 1e-12
 
 
 def countdown(timer: float, dt: float) -> float:
-    """Subtract elapsed seconds, snapping rounding residue to zero."""
+    """Subtract elapsed seconds, snapping rounding residue to zero.
+    
+    Args:
+        timer: How many seconds are left.
+        dt: How many seconds have passed.
+    """
     remaining = timer - dt
 
     return remaining if remaining > EPSILON else 0.0
@@ -29,7 +34,11 @@ class GameState:
     # Moving one tile per frame would make fast computers run the game faster.
     # Using time makes the speed the same everywhere.
     STEP_TIME = 0.15
+    
+    # Normal ghosts move one tile every 0.20 seconds
     GHOST_STEP_TIME = 0.20
+
+    # Edible ghosts move one tile every 0.30 seconds
     EDIBLE_STEP_TIME = 0.30
 
     # After you lose a life, you’re protected for 2 seconds.
@@ -77,7 +86,9 @@ class GameState:
         # Track how long Pac-Man has waited since the last tile step.
         self._movement_elapsed = 0.0
 
+        # Creates a seeded random generator for ghost decisions.
         self._ghost_rng = random.Random(spec.seed)
+
         self.super_pacgums = set(ghost_spawns)
         excluded = {player_spawn, *ghost_spawns}
 
@@ -107,14 +118,20 @@ class GameState:
         """
 
         if not math.isfinite(dt) or dt < 0:
-            raise ValueError('dt must be finite and non-negative')
+            raise ValueError("dt must be finite and non-negative")
 
-        if self.status != 'playing':
+        # If the game isn't currently being played, stop updating it.
+        if self.status != "playing":
             return
 
+        # Saves Pac-Man's current position.
         old_player = self.player.pos
+
+        # Saves every ghost's current position as a tuple.
         old_ghosts = tuple(ghost.pos for ghost in self.ghosts)
 
+        # Checks for an existing collision before advancing time.
+        # If the function returns True, Pac-Man lost a life, so the update stops.
         if self._resolve_collisions(old_player, old_ghosts):
             return
 
@@ -139,12 +156,14 @@ class GameState:
             elapsed = min(remaining, *deadlines)
 
             self._advance_timers(elapsed)
+
+            # After the time ends we decrease the lifes and reset the timing
             if self.time_left == 0:
-                # Timeout wins a tie with a movement/collision event.
                 self._lose_life()
-                if self.status == 'playing':
+
+                if self.status == "playing":
                     self.time_left = self.config.level_max_time
-                return  # Discard the old frame's remaining elapsed time.
+                return
             self._movement_elapsed += elapsed
             remaining = max(0.0, remaining - elapsed)
             old_player = self.player.pos
@@ -157,8 +176,8 @@ class GameState:
                 if self._resolve_collisions(old_player, old_ghosts):
                     return
 
-            # Keep the pre-event snapshots for swapped-tile detection.
             self._move_ghosts()
+
             if self._resolve_collisions(old_player, old_ghosts):
                 return
 
@@ -167,7 +186,9 @@ class GameState:
                     'game_won' if self.level == len(self.levels)
                     else 'level_won'
                 )
+
                 self._movement_elapsed = 0.0
+
                 return
 
     def _advance_timers(self, dt: float) -> None:
@@ -321,11 +342,12 @@ class GameState:
         self.grace_timer = self.GRACE_DURATION
 
         if self.lives == 0:
-            self.status = 'game_over'
+            self.status = "game_over"
 
     def next_level(self) -> None:
         """Advance a cleared level, preserving score, lives, and the cheat."""
         if self.status != 'level_won':
-            raise ValueError('Only a cleared non-final level can advance')
+            raise ValueError("Only a cleared non-final level can advance")
+
         # Level number equals the next index.
         self._load_level(self.level)
