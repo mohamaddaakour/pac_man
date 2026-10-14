@@ -1,4 +1,4 @@
-"""Simple graphical phase 5 demo using the existing frontend window wrapper."""
+"""Graphical campaign demo using the existing frontend window wrapper."""
 
 from __future__ import annotations
 
@@ -46,12 +46,21 @@ def circle(window: Window, size: int, radius: float, color: Color) -> Image:
 
 
 class GraphicalDemo:
-    """Connect keyboard and frame callbacks to the phase 5 game core."""
+    """Connect keyboard and frame callbacks to the campaign game core."""
 
     def __init__(self, window: Window, state: GameState) -> None:
         """Calculate layout and build all image buffers before the loop."""
         self.window = window
         self.state = state
+        self.paused = False
+        self._prepare_images()
+        window.on_key(self.on_key)
+        window.on_close(window.close)
+        window.on_frame(self.on_frame)
+
+    def _prepare_images(self) -> None:
+        """Rebuild layout and images when a level's grid changes."""
+        window, state = self.window, self.state
         rows, cols = len(state.grid), len(state.grid[0])
         self.tile_size = min(
             24, (window.width - 2 * MARGIN) // cols,
@@ -91,15 +100,21 @@ class GraphicalDemo:
         self.edible_ghost = circle(
             window, size, max(0.8, size * 0.40), (60, 130, 255)
         )
-        window.on_key(self.on_key)
-        window.on_close(window.close)
-        window.on_frame(self.on_frame)
 
     def on_key(self, event: KeyEvent) -> None:
         """Queue WASD turns without Enter; Escape or q closes the window."""
         key = event.typed_character.lower()
         if event.key_code == KEY_ESCAPE or key == 'q':
             self.window.close()
+        elif key == 'p':
+            self.paused = not self.paused
+        elif (key == 'n' and self.state.status == 'level_won'
+              and not self.paused):
+            self.state.next_level()
+            # Rebuild layout and cached walls for the new grid dimensions.
+            self._prepare_images()
+        elif self.paused or self.state.status != 'playing':
+            return
         elif key == 'i':
             self.state.toggle_invisibility()
         elif key in KEYS:
@@ -117,7 +132,8 @@ class GraphicalDemo:
         """Advance the core and draw the latest state and HUD."""
         if self.window.closed:
             return
-        self.state.update(dt)
+        if not self.paused:
+            self.state.update(dt)
         self.window.clear(BACKGROUND)
         self.window.put_image(self.background, self.offset_x, self.offset_y)
         for pos in self.state.pacgums:
@@ -135,16 +151,22 @@ class GraphicalDemo:
         self.window.put_text(
             MARGIN, 10,
             f'Score: {self.state.score}   Lives: {self.state.lives}   '
-            f'Level: {self.state.level}   Pellets: {remaining}', WHITE,
+            f'Level: {self.state.level}/{len(self.state.levels)}   '
+            f'Time: {self.state.time_left:.1f}s   Pellets: {remaining}', WHITE,
         )
         self.window.put_text(
             MARGIN, 38,
-            'WASD: move   I: invisibility   Esc / Q: quit', WHITE,
+            'WASD: move   I: invisible   P: pause   N: next   Esc/Q: quit',
+            WHITE,
         )
         if self.state.status == 'level_won':
-            message = 'Level complete! Esc / Q to close.'
+            message = 'Level complete! N: next level   Esc/Q: quit.'
+        elif self.state.status == 'game_won':
+            message = f'Campaign won! Score: {self.state.score}. Esc/Q: quit.'
         elif self.state.status == 'game_over':
             message = 'Game over! Esc / Q to close.'
+        elif self.paused:
+            message = 'Paused — P: resume   Esc/Q: quit.'
         else:
             message = (
                 f'Invisible: {self.state.invisible}   '
@@ -163,7 +185,7 @@ def main(argv: list[str]) -> int:
     path = argv[1] if len(argv) > 1 else 'config.json'
     try:
         state = GameState(load_config(path))
-        with Window(WIDTH, HEIGHT, 'Pac-Man — Phase 5') as window:
+        with Window(WIDTH, HEIGHT, 'Pac-Man') as window:
             GraphicalDemo(window, state)
             window.run()
     except (ConfigError, MazeError, GraphicsError, OSError) as exc:

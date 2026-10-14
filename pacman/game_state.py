@@ -9,6 +9,7 @@ from pacman.entities import (
 from pacman.maze_adapter import build_grid
 from pacman.ghost_ai import choose_direction, distance_map
 from pacman.config import Config
+from pacman.levels import plan_levels
 
 
 EPSILON = 1e-12
@@ -45,38 +46,47 @@ class GameState:
     invisible: bool
 
     def __init__(self, config: Config) -> None:
-        """Generate level 1 and place entities and points."""
+        """Start a campaign while keeping configured settings immutable."""
         self.config = config
-        self.status = "playing"
+        self.levels = plan_levels(config.levels)
         self.score = 0
         self.lives = config.lives
-        self.level = 1
-        self.time_left = config.level_max_time
         self.invisible = False
-        self.edible_timer = 0.0
-        self.grace_timer = 0.0
-        spec = config.levels[0]
-        self._ghost_rng = random.Random(spec.seed)
-        self.grid = build_grid(spec.width, spec.height, spec.seed)
-        player_spawn, ghost_spawns = choose_spawns(self.grid)
+        # Load level 0 (exposed as level 1) first.
+        self._load_level(0)
+
+    def _load_level(self, index: int) -> None:
+        """Prepare a new maze before committing a transition to this state."""
+        spec = self.levels[index]
+        # If generation fails above, the previous level stays intact.
+        grid = build_grid(spec.width, spec.height, spec.seed)
+        player_spawn, ghost_spawns = choose_spawns(grid)
+
+        self.grid = grid
         self.player_spawn = player_spawn
         self.ghost_spawns = ghost_spawns
         self.player = Entity(player_spawn)
         self.ghosts = [Ghost(pos) for pos in ghost_spawns]
+        self.level = index + 1  # Public level numbers are one-based.
+        self.status = 'playing'
+        self.time_left = self.config.level_max_time
+        self.edible_timer = 0.0
+        self.grace_timer = 0.0
         self.next_direction: Direction | None = None
 
-        # `_movement_elapsed` is a stopwatch of how long Pac-Man has waited since his last step.
+        # Track how long Pac-Man has waited since the last tile step.
         self._movement_elapsed = 0.0
 
+        self._ghost_rng = random.Random(spec.seed)
         self.super_pacgums = set(ghost_spawns)
         excluded = {player_spawn, *ghost_spawns}
 
-        # Put the positions of pacgums
+        # Put the positions of pacgums (collectible tiles).
         self.pacgums = {
             (row, col)
-            for row in range(len(self.grid))
-            for col in range(len(self.grid[row]))
-            if self.grid[row][col] == 0 and (row, col) not in excluded
+            for row in range(len(grid))
+            for col in range(len(grid[row]))
+            if grid[row][col] == 0 and (row, col) not in excluded
         }
 
     def set_direction(self, direction: Direction) -> None:
@@ -112,7 +122,9 @@ class GameState:
 
         while remaining > 0:
             # Time until Pac-Man’s next step.
-            deadlines = [self.STEP_TIME - self._movement_elapsed]
+            deadlines = [
+                self.time_left, self.STEP_TIME - self._movement_elapsed
+            ]
 
             deadlines.extend(
                 self._ghost_step_time(ghost) - ghost.movement_elapsed
@@ -127,6 +139,12 @@ class GameState:
             elapsed = min(remaining, *deadlines)
 
             self._advance_timers(elapsed)
+            if self.time_left == 0:
+                # Timeout wins a tie with a movement/collision event.
+                self._lose_life()
+                if self.status == 'playing':
+                    self.time_left = self.config.level_max_time
+                return  # Discard the old frame's remaining elapsed time.
             self._movement_elapsed += elapsed
             remaining = max(0.0, remaining - elapsed)
             old_player = self.player.pos
@@ -145,12 +163,17 @@ class GameState:
                 return
 
             if not self.pacgums and not self.super_pacgums:
-                self.status = 'level_won'
+                self.status = (
+                    'game_won' if self.level == len(self.levels)
+                    else 'level_won'
+                )
                 self._movement_elapsed = 0.0
                 return
 
     def _advance_timers(self, dt: float) -> None:
         """Expire power/grace and return eaten ghosts to their corner state."""
+        # time_left also counts down.
+        self.time_left = countdown(self.time_left, dt)
         self.edible_timer = countdown(self.edible_timer, dt)
         self.grace_timer = countdown(self.grace_timer, dt)
 
@@ -252,7 +275,7 @@ class GameState:
         # either it shares Pac-Man’s tile, or they swapped tiles this step.
         contacts = [
             (index, ghost) for index, (ghost, previous)
-            # `zip` pairs each ghost with its previous position, and `enumerate` adds its index.
+            # Pair each ghost with its previous tile and spawn index.
             in enumerate(zip(self.ghosts, old_ghosts))
             if ghost.state != GhostState.EATEN and (
                 ghost.pos == self.player.pos or (
@@ -301,5 +324,8 @@ class GameState:
             self.status = 'game_over'
 
     def next_level(self) -> None:
-        """Build the next level, keeping score and lives."""
-        raise NotImplementedError
+        """Advance a cleared level, preserving score, lives, and the cheat."""
+        if self.status != 'level_won':
+            raise ValueError('Only a cleared non-final level can advance')
+        # Level number equals the next index.
+        self._load_level(self.level)

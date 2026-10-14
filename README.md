@@ -2,8 +2,8 @@
 
 # Pac-Man: Ghosts! More ghosts!
 
-A Pac-Man project written in Python 3.10+. The current core generates a maze
-and lets you play the first level in the terminal, collecting pellets for points.
+A Pac-Man project written in Python 3.10+. Play a campaign of generated mazes
+in the terminal or a graphical demo, collecting pellets and avoiding ghosts.
 
 ## Current features
 
@@ -17,14 +17,16 @@ and lets you play the first level in the terminal, collecting pellets for points
 - Timed edible ghosts, ghost scoring, and eaten-ghost respawns
 - Invisibility toggle and a graphical integration demo
 - Moving ghosts with BFS chasing, random junction choices, and slower fleeing
+- A campaign of at least ten levels with countdowns and win/lose outcomes
+- Pause/resume and level transitions that preserve score and lives
 
-Ghosts now move in phase 5, and normal contacts cost a life.
-The level countdown, level progression, and highscores come in later core phases.
-Power, grace, and ghost respawn timers are active now.
+Normal ghost contacts and level timeouts cost a life. Power, grace, and ghost
+respawn timers are active during play. Persistent highscores are not implemented
+yet.
 
 ## Maze generation and spawns
 
-We added `pacman/maze_adapter.py` to use the assigned
+`pacman/maze_adapter.py` uses the assigned
 `mazegenerator-2.1.0` package without changing its code.
 
 - `build_grid(width, height, seed)` calls `MazeGenerator` with
@@ -51,7 +53,7 @@ bottom-left, and bottom-right corners for the ghosts. All five starting
 positions are distinct. Super-pacgums occupy the ghost spawn tiles. Normal pellets
 occupy all other corridors except the player's starting tile.
 
-The demo plays the first configured level: `#` is a wall, `.` is a normal pellet,
+The terminal map uses `#` for walls and `.` for normal pellets.
 `O` is a super-pacgum, `P` is the player, and `1` to `4` are ghosts in corner
 order. Ghost markers cover the super-pacgums at their starting positions.
 Edible ghosts use `e`; eaten ghosts are hidden until they respawn.
@@ -93,11 +95,12 @@ Normal pellets award `points_per_pacgum`; super-pacgums award
 Walking onto a ghost's starting tile consumes its super-pacgum before resolving
 contact, making that ghost edible and allowing it to be eaten for points.
 
-When both pellet sets are empty, the core sets `status` to `level_won`, freezes
-movement, and the demo prints a completion message and exits. Automatic progression
-to the next level comes in phase 6.
+When both pellet sets are empty, a non-final level sets `status` to `level_won`
+and freezes the core. Press N to continue. Clearing the final level sets
+`game_won`; the terminal prints the final score and exits, while the graphical
+demo displays the result until Esc or Q closes it.
 
-## Phase 4 collisions and invisibility
+## Collisions and invisibility
 
 A normal ghost costs one life on contact unless invisibility or grace protects
 the player. Multiple simultaneous contacts cost at most one life. Losing a life
@@ -120,10 +123,9 @@ the graphical demo. The invisibility command itself consumes no terminal time.
 Edible ghosts are blue in the graphical demo. Eaten ghosts are hidden in both
 demos. The terminal exits on game over; the graphical demo displays the result
 until Esc or Q closes it. Same-tile and swapped-tile contacts are supported.
-Lethal last-life contact takes
-priority over consuming the final pellet.
+Lethal last-life contact takes priority over level completion.
 
-## Phase 5 moving ghosts
+## Ghost movement
 
 All four ghosts use BFS corridor distances to chase the player's current tile.
 At junctions they choose the shortest allowed move in a 70% branch and a random
@@ -145,8 +147,44 @@ shares one BFS distance map among ghosts due at the same event.
 
 Ghost decisions use a separate random generator. A fixed level seed and the same
 timed input sequence reproduce decisions within the same runtime; omitted seeds
-request fresh randomness. Level progression and the level countdown remain for
-phase 6.
+request fresh randomness.
+
+## Campaign, countdown, and pause
+
+The campaign includes every configured level and extends shorter lists to at
+least ten levels. If the first level omits its seed, it defaults to 42. Appended
+levels use random seeds and grow by two generator cells per side up to 21.
+Larger configured dimensions are preserved, and explicit seeds are honored.
+
+Each level starts with `level_max_time` seconds. Ghost damage keeps the remaining
+level time. A timeout costs one life, resets positions and the timer, and preserves
+the maze, score, and already eaten pellets. Invisibility does not protect against
+timeout. The last life lost sets `game_over` and freezes the core. A timeout that
+coincides with a movement step takes precedence over that step.
+
+Press P to pause or resume. Movement and all core timers freeze while paused.
+Use N after clearing a level to generate the next maze. Score, lives, and
+invisibility carry forward; pellets, power, movement clocks, and the level timer
+reset. The graphical demo rebuilds its layout and cached walls for the new maze.
+Generation failures display an error and exit with a failure code.
+
+In the terminal, press Enter after each command. Time advances only with accepted
+movement/Enter commands, and waiting for input consumes no time. The graphical
+demo advances continuously and accepts keys without Enter. While paused, P
+resumes and Q exits; other controls do not change the core.
+
+The default 90-second limit can be tight for larger mazes. Set `level_max_time`
+to 300 seconds or more when verifying a full campaign, then tune it for the
+configured dimensions and desired difficulty.
+
+| Control | Action |
+|---|---|
+| WASD | Request a movement direction |
+| Enter (terminal) | Continue moving and advance simulated time |
+| I | Toggle invisibility during active play |
+| P | Pause/resume |
+| N | Advance a cleared non-final level |
+| Q / Esc (graphical) | Quit |
 
 ## Check the code
 
