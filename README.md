@@ -4,8 +4,9 @@
 
 A Pac-Man project written in Python 3.10+. Play a campaign of generated mazes
 in the terminal or a graphical demo, collecting pellets and avoiding ghosts.
+Both applications provide a menu, instructions, name entry, and saved highscores.
 
-## Current features
+## Description
 
 - JSON configuration with comments, safe defaults, and clear messages for bad values
 - Maze generation using the assigned A-Maze-ing package
@@ -19,10 +20,11 @@ in the terminal or a graphical demo, collecting pellets and avoiding ghosts.
 - Moving ghosts with BFS chasing, random junction choices, and slower fleeing
 - A campaign of at least ten levels with countdowns and win/lose outcomes
 - Pause/resume and level transitions that preserve score and lives
+- Menus, instructions, and persistent top-ten highscores with name validation
 
 Normal ghost contacts and level timeouts cost a life. Power, grace, and ghost
-respawn timers are active during play. Persistent highscores are not implemented
-yet.
+respawn timers are active during play. Completed games can enter the persistent
+top-ten table; scores are saved only after a valid name is submitted.
 
 ## Maze generation and spawns
 
@@ -68,14 +70,22 @@ python -m pip install -r requirements.txt
 
 ## Run
 
+The required root entry point accepts exactly one JSON config filename:
+
 ```bash
-# Run the demo
+python3 pac-man.py config.json
+```
+
+Alternative launch commands:
+
+```bash
+# Terminal menu and campaign
 python -m tools.cli_demo config.json
 
 # Same playable demo through the project entry point
 python -m pacman.main config.json
 
-# Graphical demo: WASD without Enter, I toggles invisibility, Esc/Q quits
+# Graphical menu and campaign
 make graphical-demo
 ```
 
@@ -84,7 +94,8 @@ make graphical-demo
 Type `w`, `a`, `s`, or `d`, followed by Enter, to request a direction. Press Enter
 alone to continue moving. Each accepted command advances 0.15 simulated seconds,
 which moves the player one tile if the path is open. Time does not advance while
-the terminal waits for input. Use `q`, Ctrl+C, or end-of-input to close the demo.
+the terminal waits for input. Q returns from play to the menu; Q at the menu
+exits. Ctrl+C or end-of-input also closes the terminal application.
 Invalid commands display help without advancing the game.
 
 Walls stop movement. A blocked turn stays buffered: the player keeps moving
@@ -97,8 +108,8 @@ contact, making that ghost edible and allowing it to be eaten for points.
 
 When both pellet sets are empty, a non-final level sets `status` to `level_won`
 and freezes the core. Press N to continue. Clearing the final level sets
-`game_won`; the terminal prints the final score and exits, while the graphical
-demo displays the result until Esc or Q closes it.
+`game_won`. Either final outcome offers name entry if the score qualifies, then
+returns to the menu. Quitting an unfinished game does not submit a score.
 
 ## Collisions and invisibility
 
@@ -121,8 +132,7 @@ Timers advance in simulated seconds in the terminal and elapsed frame time in
 the graphical demo. The invisibility command itself consumes no terminal time.
 
 Edible ghosts are blue in the graphical demo. Eaten ghosts are hidden in both
-demos. The terminal exits on game over; the graphical demo displays the result
-until Esc or Q closes it. Same-tile and swapped-tile contacts are supported.
+demos. Both applications show the final score and offer eligible name entry. Same-tile and swapped-tile contacts are supported.
 Lethal last-life contact takes priority over level completion.
 
 ## Ghost movement
@@ -171,7 +181,7 @@ Generation failures display an error and exit with a failure code.
 In the terminal, press Enter after each command. Time advances only with accepted
 movement/Enter commands, and waiting for input consumes no time. The graphical
 demo advances continuously and accepts keys without Enter. While paused, P
-resumes and Q exits; other controls do not change the core.
+resumes and Q returns to the menu; other controls do not change the core.
 
 The default 90-second limit can be tight for larger mazes. Set `level_max_time`
 to 300 seconds or more when verifying a full campaign, then tune it for the
@@ -184,7 +194,105 @@ configured dimensions and desired difficulty.
 | I | Toggle invisibility during active play |
 | P | Pause/resume |
 | N | Advance a cleared non-final level |
-| Q / Esc (graphical) | Quit |
+| Q / Esc (graphical) | Return to menu; quit from the menu |
+
+## Menu and score entry
+
+At the menu, S or Enter starts a new campaign, H displays highscores, T shows
+instructions, and Q exits. In the graphical application, any key returns from
+instructions or the score table to the menu. A new game resets gameplay state.
+
+After a win or loss, submit 1–10 ASCII letters, digits, or spaces. Names containing
+only spaces are rejected. In the terminal, an empty name skips submission; in the
+window, Backspace edits, Enter saves, and Escape skips. Invalid names or save
+failures can be corrected/retried. A successful submission happens once and is
+shown in the score table. Games played with invisibility remain eligible.
+
+## Configuration
+
+JSON supports full-line # comments, // line comments, and /* block comments */.
+Comment-like text inside strings is preserved. Missing/invalid values use defaults
+or clamps with a message; unknown keys are ignored. Invalid files raise a readable
+ConfigError. A UTF-8 BOM is accepted.
+
+| Key | Default | Accepted values |
+|---|---|---|
+| highscore_filename | highscores.json | Nonempty path; relative to the config directory |
+| levels | One 15×15 level, seed 42 | List of width/height/optional seed objects |
+| Level width/height | 15 | Integers clamped to 5–99 generator cells |
+| Level seed | Random when omitted | Integer or null; campaign's first default becomes 42 |
+| lives | 3 | Integer, 1–9 |
+| points_per_pacgum | 10 | Integer, 0–10000 |
+| points_per_super_pacgum | 50 | Integer, 0–10000 |
+| points_per_ghost | 200 | Integer, 0–10000 |
+| level_max_time | 90 | Number, 10–3600 seconds |
+| edible_duration | 10 | Number, 1–60 seconds |
+| ghost_respawn_time | 5 | Number, 1–60 seconds |
+
+Booleans are not accepted as numeric values. Absolute score paths are honored;
+relative paths are resolved beside the supplied config file, independent of the
+launch directory. The core keeps Config immutable when expanding the campaign.
+
+## Highscores
+
+Highscores keeps at most ten [name, score] pairs in a JSON list, sorted by score
+in descending order. Scores must be non-negative integers, excluding booleans.
+When the table is full, a new score must exceed the last score. Equal scores keep
+their existing order. top10() returns a copy.
+
+JSON is easy to inspect and requires no additional database dependency. The
+manager validates every loaded entry, ignores malformed rows, and uses an empty
+table with a warning for unreadable or corrupt files. Missing files start empty.
+It writes a temporary file in the destination directory, flushes/synchronizes it,
+then replaces the target atomically. A failed save returns False, preserves the
+previous in-memory table and existing file, and exposes last_error for the UI.
+The application must have permission to write to the selected directory.
+
+The manager is intended for a single running application; simultaneous writers
+are not coordinated with a file lock.
+
+## General software architecture
+
+- pacman/config.py validates settings and provides immutable data classes.
+- pacman/maze_adapter.py isolates the assigned generator and validates tile grids.
+- pacman/entities.py defines directions, positions, entities, and spawn helpers.
+- pacman/ghost_ai.py computes corridor distances and chase/flee decisions.
+- pacman/levels.py expands the campaign; pacman/game_state.py owns all game rules.
+- pacman/highscore.py owns validation, ranking, and atomic persistence.
+- tools/session.py resolves score storage and formats score tables.
+- tools/cli_demo.py and tools/graphical_demo.py own menus, input, pause, and display.
+- frontend/window.py provides the graphical window and image API. Other frontend
+  modules remain the teammate's integration work.
+
+See [the core API contract](docs/core-api.md) for the frontend handoff. Rendering
+reads state; it never removes pellets, awards points, or advances timers itself.
+
+## Implementation
+
+The core uses timed tile steps and event boundaries for player movement, ghost
+movement, and timer expirations. Player arrival contact is checked before a ghost
+can move away. The window caches static walls and sprites, rebuilding them when
+the level grid changes. Both applications keep application flow separate from
+GameState. Unexpected application errors return a failure code without a traceback.
+
+## Project management
+
+Progress and team organization are tracked in [docs/project_management](docs/project_management).
+The [acceptance checklist](docs/project_management/acceptance.md) and
+[risk notes](docs/project_management/risks.md) cover the core handoff. Documentation
+records implementation and manual/runtime checks separately from unit testing.
+
+## Resources
+
+- [Python JSON documentation](https://docs.python.org/3/library/json.html)
+- [Python dataclasses documentation](https://docs.python.org/3/library/dataclasses.html)
+- [Python tempfile documentation](https://docs.python.org/3/library/tempfile.html)
+- [Pygame documentation](https://www.pygame.org/docs/)
+- The assigned mazegenerator wheel's source and metadata document its actual API.
+
+AI assistance was used for roadmap planning, implementation suggestions, bug
+reviews, integration, runtime verification, and documentation. The original
+structure of the highscore manager was retained when applying fixes.
 
 ## Check the code
 

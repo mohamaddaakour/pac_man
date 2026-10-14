@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-# Enable creating an instance and modifying its
-# value even if it was a frozen dataclass
+# replace creates a new dataclass instance with selected fields changed.
+# The original frozen instance remains unchanged.
 from dataclasses import replace
 
 from pacman.config import LevelSpec

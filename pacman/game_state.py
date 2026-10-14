@@ -17,7 +17,7 @@ EPSILON = 1e-12
 
 def countdown(timer: float, dt: float) -> float:
     """Subtract elapsed seconds, snapping rounding residue to zero.
-    
+
     Args:
         timer: How many seconds are left.
         dt: How many seconds have passed.
@@ -34,7 +34,7 @@ class GameState:
     # Moving one tile per frame would make fast computers run the game faster.
     # Using time makes the speed the same everywhere.
     STEP_TIME = 0.15
-    
+
     # Normal ghosts move one tile every 0.20 seconds
     GHOST_STEP_TIME = 0.20
 
@@ -131,7 +131,7 @@ class GameState:
         old_ghosts = tuple(ghost.pos for ghost in self.ghosts)
 
         # Checks for an existing collision before advancing time.
-        # If the function returns True, Pac-Man lost a life, so the update stops.
+        # A True result means a life was lost; stop this update.
         if self._resolve_collisions(old_player, old_ghosts):
             return
 

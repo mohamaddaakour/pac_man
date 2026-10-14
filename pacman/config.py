@@ -330,7 +330,7 @@ def load_config(path: str | Path, report: Report = _print_report) -> Config:
         text = Path(path).read_text(encoding="utf-8-sig")
     except FileNotFoundError:
         raise ConfigError(f"Config file not found: {path}")
-    except (OSError, UnicodeDecodeError) as exc:
+    except (OSError, UnicodeDecodeError, ValueError) as exc:
         raise ConfigError(f"cannot read config file {path}: {exc}")
 
     try:
