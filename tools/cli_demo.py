@@ -1,12 +1,14 @@
-"""Play the first level with line-based terminal input."""
+"""Play the campaign with line-based terminal input."""
 
 from __future__ import annotations
 
 import sys
 
-from pacman.config import ConfigError, load_config
+from pacman.config import Config, ConfigError, load_config
 from pacman.entities import Direction, GhostState
 from pacman.game_state import GameState
+from pacman.highscore import Highscores, NAME_PATTERN
+from tools.session import load_highscores, score_lines
 from pacman.maze_adapter import MazeError
 
 KEYS = {
@@ -35,53 +37,119 @@ def render_ascii(state: GameState) -> str:
     return '\n'.join(''.join(row) for row in canvas)
 
 
+def play_campaign(config: Config) -> GameState | None:
+    """Play until a final result; unfinished games submit no score."""
+    state = GameState(config)
+    paused = False
+    print('WASD/Enter: move   I: invisible   K: skip level')
+    print('P: pause   N: next cleared level   Q: menu')
+    while True:
+        print(render_ascii(state))
+        remaining = len(state.pacgums) + len(state.super_pacgums)
+        print(
+            f'Level: {state.level}/{state.total_levels} | '
+            f'Time: {state.time_left:.1f}s | Score: {state.score} | '
+            f'Lives: {state.lives} | Pellets: {remaining} | '
+            f'Invisible: {state.invisible} | '
+            f'Power: {state.edible_timer:.1f}s | '
+            f'Grace: {state.grace_timer:.1f}s'
+        )
+        if state.status in ('game_won', 'game_over'):
+            outcome = ('Campaign won!' if state.status == 'game_won'
+                       else 'Game over!')
+            print(f'{outcome} Final score: {state.score}')
+            return state
+        if state.status == 'level_won':
+            print('Level complete! N advances; Q returns to the menu.')
+        if paused:
+            print('Paused — P resumes, Q returns to menu.')
+        command = input('Command: ').strip().lower()
+        if command == 'q':
+            return None
+        if command == 'p':
+            paused = not paused
+            continue
+        if paused:
+            continue
+        if command == 'n':
+            if state.status == 'level_won':
+                state.next_level()
+            else:
+                print('Clear the current level before advancing.')
+            continue
+        if state.status != 'playing':
+            continue
+        if command == 'i':
+            state.toggle_invisibility()
+            continue
+        if command == 'k':
+            state.skip_level()
+            continue
+        if command in KEYS:
+            state.set_direction(KEYS[command])
+        elif command:
+            print('Use WASD, Enter, I, K, P, N, or Q.')
+            continue
+        state.update(state.STEP_TIME)
+
+
+def submit_score(scores: Highscores, score: int) -> None:
+    """Offer one submission; invalid names can be corrected or skipped."""
+    while True:
+        name = input('Name (1–10 letters/digits/spaces; Enter skips): ')
+        if not name:
+            return
+        if not name.strip() or NAME_PATTERN.fullmatch(name) is None:
+            print('Use 1–10 letters, digits, or spaces, not only spaces.')
+            continue
+        if not scores.qualifies(score):
+            print('This score does not enter the top ten; table unchanged.')
+            return
+        if scores.add(name, score):
+            print('Score saved.')
+            return
+        print(scores.last_error or 'Could not save the score.')
+
+
 def main(argv: list[str]) -> int:
-    """Play one level; initialization errors exit with a readable message."""
+    """Run menu, campaign, name entry, and persistent score table."""
+    if len(argv) > 2:
+        print('Usage: python -m tools.cli_demo [config.json]', file=sys.stderr)
+        return 1
     path = argv[1] if len(argv) > 1 else 'config.json'
     try:
-        state = GameState(load_config(path))
-    except (ConfigError, MazeError) as exc:
+        config = load_config(path)
+        scores = load_highscores(config, path)
+        while True:
+            print('\nPac-Man: S=start   H=scores   T=help   Q=quit')
+            choice = input('Menu: ').strip().lower()
+            if choice == 'q':
+                return 0
+            if choice in ('s', ''):
+                completed = play_campaign(config)
+                if completed is not None:
+                    submit_score(scores, completed.score)
+                    print('\n'.join(score_lines(scores)))
+            elif choice == 'h':
+                print('\n'.join(score_lines(scores)))
+            elif choice == 't':
+                print('WASD + Enter moves; Enter continues. I protects you.')
+                print('P: pause; N: next cleared level; Q: menu.')
+                print('K: win the current level immediately (review cheat).')
+                print('Collect pellets; ghosts and timeouts cost lives.')
+                print('Power makes ghosts edible. Clear all levels to win.')
+            else:
+                print('Use S, H, T, or Q.')
+    except (EOFError, KeyboardInterrupt):
+        print('\nClosed.')
+        return 0
+    except (ConfigError, MazeError, OSError, ValueError) as exc:
         print(f'Error: {exc}', file=sys.stderr)
         return 1
-
-    print('WASD + Enter: turn; Enter: continue; i: invisibility; q: quit.')
-    print('Each accepted command advances 0.15 simulated seconds.')
-    print('Ghosts chase normally and flee when edible; I prevents damage.')
-    print('Legend: # wall, . pacgum, O super-pacgum, P player, 1–4 ghosts.')
-    print('e = edible ghost; eaten ghosts disappear until they respawn.')
-    print(f'Tile grid: {len(state.grid)} rows x {len(state.grid[0])} columns')
-    try:
-        while True:
-            print(render_ascii(state))
-            remaining = len(state.pacgums) + len(state.super_pacgums)
-            print(
-                f'Score: {state.score} | Lives: {state.lives} | '
-                f'Remaining: {remaining} | '
-                f'Invisible: {state.invisible} | '
-                f'Power: {state.edible_timer:.1f}s '
-                f'| Grace: {state.grace_timer:.1f}s'
-            )
-            if state.status == 'level_won':
-                print('Level complete! Level progression comes in phase 6.')
-                return 0
-            if state.status == 'game_over':
-                print('Game over!')
-                return 0
-            command = input('Move [w/a/s/d, Enter, i, q]: ').strip().lower()
-            if command == 'q':
-                return 0
-            if command == 'i':
-                state.toggle_invisibility()
-                continue  # Toggling the cheat does not consume time.
-            if command in KEYS:
-                state.set_direction(KEYS[command])
-            elif command:
-                print('Use w, a, s, d, Enter, i, or q.')
-                continue  # Invalid input does not advance simulation time.
-            state.update(state.STEP_TIME)
-    except (EOFError, KeyboardInterrupt):
-        print('\nDemo closed.')
-        return 0
+    except Exception as exc:
+        # Final application boundary: unexpected failures still exit clearly.
+        print(f'Unexpected game error: {exc}', file=sys.stderr)
+        return 1
 
 
 if __name__ == '__main__':

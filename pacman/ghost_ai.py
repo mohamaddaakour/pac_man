@@ -9,7 +9,7 @@ from pacman.entities import (
     Direction, Ghost, GhostState, Grid, Position, is_walkable,
 )
 
-# A normal ghost takes the best move 70% of the time.
+# At junctions, 70% selects the chase branch; random picks may also be best.
 CHASE_CHANCE = 0.70
 
 
@@ -44,11 +44,11 @@ def choose_direction(
     time and a random allowed move otherwise. Ties follow Direction order.
     The random branch may also pick the shortest move.
     """
-    # If the ghost is eaten it will flee not chase
+    # Eaten ghosts wait to respawn; unreachable ghosts cannot move.
     if ghost.state == GhostState.EATEN or ghost.pos not in distances:
         return None
 
-    # distance = 0 means pacman position and the collision function will handle this
+    # At the player tile, resolve contact before requesting movement.
     if distances[ghost.pos] == 0:
         return None
 

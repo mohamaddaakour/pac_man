@@ -9,13 +9,19 @@ from pacman.entities import (
 from pacman.maze_adapter import build_grid
 from pacman.ghost_ai import choose_direction, distance_map
 from pacman.config import Config
+from pacman.levels import plan_levels
 
 
 EPSILON = 1e-12
 
 
 def countdown(timer: float, dt: float) -> float:
-    """Subtract elapsed seconds, snapping rounding residue to zero."""
+    """Subtract elapsed seconds, snapping rounding residue to zero.
+
+    Args:
+        timer: How many seconds are left.
+        dt: How many seconds have passed.
+    """
     remaining = timer - dt
 
     return remaining if remaining > EPSILON else 0.0
@@ -28,7 +34,11 @@ class GameState:
     # Moving one tile per frame would make fast computers run the game faster.
     # Using time makes the speed the same everywhere.
     STEP_TIME = 0.15
+
+    # Normal ghosts move one tile every 0.20 seconds
     GHOST_STEP_TIME = 0.20
+
+    # Edible ghosts move one tile every 0.30 seconds
     EDIBLE_STEP_TIME = 0.30
 
     # After you lose a life, you’re protected for 2 seconds.
@@ -45,38 +55,54 @@ class GameState:
     invisible: bool
 
     def __init__(self, config: Config) -> None:
-        """Generate level 1 and place entities and points."""
+        """Start a campaign while keeping configured settings immutable."""
         self.config = config
-        self.status = "playing"
+        self.levels = plan_levels(config.levels)
         self.score = 0
         self.lives = config.lives
-        self.level = 1
-        self.time_left = config.level_max_time
         self.invisible = False
-        self.edible_timer = 0.0
-        self.grace_timer = 0.0
-        spec = config.levels[0]
-        self._ghost_rng = random.Random(spec.seed)
-        self.grid = build_grid(spec.width, spec.height, spec.seed)
-        player_spawn, ghost_spawns = choose_spawns(self.grid)
+        # Load level 0 (exposed as level 1) first.
+        self._load_level(0)
+
+    @property
+    def total_levels(self) -> int:
+        """Return the expanded campaign length for the HUD."""
+        return len(self.levels)
+
+    def _load_level(self, index: int) -> None:
+        """Prepare a new maze before committing a transition to this state."""
+        spec = self.levels[index]
+        # If generation fails above, the previous level stays intact.
+        grid = build_grid(spec.width, spec.height, spec.seed)
+        player_spawn, ghost_spawns = choose_spawns(grid)
+
+        self.grid = grid
         self.player_spawn = player_spawn
         self.ghost_spawns = ghost_spawns
         self.player = Entity(player_spawn)
         self.ghosts = [Ghost(pos) for pos in ghost_spawns]
+        self.level = index + 1  # Public level numbers are one-based.
+        self.status = 'playing'
+        self.time_left = self.config.level_max_time
+        self.edible_timer = 0.0
+        self.grace_timer = 0.0
         self.next_direction: Direction | None = None
 
-        # `_movement_elapsed` is a stopwatch of how long Pac-Man has waited since his last step.
+        # Track how long Pac-Man has waited since the last tile step.
         self._movement_elapsed = 0.0
+
+        # Creates a seeded random generator for ghost decisions.
+        self._ghost_rng = random.Random(spec.seed)
 
         self.super_pacgums = set(ghost_spawns)
         excluded = {player_spawn, *ghost_spawns}
 
-        # Put the positions of pacgums
+        # Put the positions of pacgums (collectible tiles).
         self.pacgums = {
             (row, col)
-            for row in range(len(self.grid))
-            for col in range(len(self.grid[row]))
-            if self.grid[row][col] == 0 and (row, col) not in excluded
+            for row in range(len(grid))
+            for col in range(len(grid[row]))
+            if grid[row][col] == 0 and (row, col) not in excluded
         }
 
     def set_direction(self, direction: Direction) -> None:
@@ -89,6 +115,20 @@ class GameState:
         """Toggle normal-ghost protection; edible ghosts still score."""
         self.invisible = not self.invisible
 
+    def skip_level(self) -> None:
+        """Win an active level for review without awarding extra points.
+
+        Preserve score and lives. The last level ends the campaign; otherwise
+        the UI can call next_level() after showing the level transition.
+        Calls outside active play do nothing.
+        """
+        if self.status != 'playing':
+            return
+        self.status = (
+            'game_won' if self.level == self.total_levels else 'level_won'
+        )
+        self._movement_elapsed = 0.0
+
     def update(self, dt: float) -> None:
         """Advance finite non-negative seconds; retain partial tile steps.
 
@@ -97,14 +137,20 @@ class GameState:
         """
 
         if not math.isfinite(dt) or dt < 0:
-            raise ValueError('dt must be finite and non-negative')
+            raise ValueError("dt must be finite and non-negative")
 
-        if self.status != 'playing':
+        # If the game isn't currently being played, stop updating it.
+        if self.status != "playing":
             return
 
+        # Saves Pac-Man's current position.
         old_player = self.player.pos
+
+        # Saves every ghost's current position as a tuple.
         old_ghosts = tuple(ghost.pos for ghost in self.ghosts)
 
+        # Checks for an existing collision before advancing time.
+        # A True result means a life was lost; stop this update.
         if self._resolve_collisions(old_player, old_ghosts):
             return
 
@@ -112,7 +158,9 @@ class GameState:
 
         while remaining > 0:
             # Time until Pac-Man’s next step.
-            deadlines = [self.STEP_TIME - self._movement_elapsed]
+            deadlines = [
+                self.time_left, self.STEP_TIME - self._movement_elapsed
+            ]
 
             deadlines.extend(
                 self._ghost_step_time(ghost) - ghost.movement_elapsed
@@ -127,6 +175,14 @@ class GameState:
             elapsed = min(remaining, *deadlines)
 
             self._advance_timers(elapsed)
+
+            # After the time ends we decrease the lifes and reset the timing
+            if self.time_left == 0:
+                self._lose_life()
+
+                if self.status == "playing":
+                    self.time_left = self.config.level_max_time
+                return
             self._movement_elapsed += elapsed
             remaining = max(0.0, remaining - elapsed)
             old_player = self.player.pos
@@ -139,18 +195,25 @@ class GameState:
                 if self._resolve_collisions(old_player, old_ghosts):
                     return
 
-            # Keep the pre-event snapshots for swapped-tile detection.
             self._move_ghosts()
+
             if self._resolve_collisions(old_player, old_ghosts):
                 return
 
             if not self.pacgums and not self.super_pacgums:
-                self.status = 'level_won'
+                self.status = (
+                    'game_won' if self.level == self.total_levels
+                    else 'level_won'
+                )
+
                 self._movement_elapsed = 0.0
+
                 return
 
     def _advance_timers(self, dt: float) -> None:
         """Expire power/grace and return eaten ghosts to their corner state."""
+        # time_left also counts down.
+        self.time_left = countdown(self.time_left, dt)
         self.edible_timer = countdown(self.edible_timer, dt)
         self.grace_timer = countdown(self.grace_timer, dt)
 
@@ -161,10 +224,7 @@ class GameState:
             if ghost.state == GhostState.EATEN:
                 ghost.respawn_timer = countdown(ghost.respawn_timer, dt)
                 if ghost.respawn_timer == 0:
-                    ghost.state = (
-                        GhostState.EDIBLE if self.edible_timer > 0
-                        else GhostState.NORMAL
-                    )
+                    ghost.state = GhostState.NORMAL
             elif self.edible_timer == 0:
                 ghost.state = GhostState.NORMAL
             if ghost.state != previous_state:
@@ -252,7 +312,7 @@ class GameState:
         # either it shares Pac-Man’s tile, or they swapped tiles this step.
         contacts = [
             (index, ghost) for index, (ghost, previous)
-            # `zip` pairs each ghost with its previous position, and `enumerate` adds its index.
+            # Pair each ghost with its previous tile and spawn index.
             in enumerate(zip(self.ghosts, old_ghosts))
             if ghost.state != GhostState.EATEN and (
                 ghost.pos == self.player.pos or (
@@ -298,8 +358,12 @@ class GameState:
         self.grace_timer = self.GRACE_DURATION
 
         if self.lives == 0:
-            self.status = 'game_over'
+            self.status = "game_over"
 
     def next_level(self) -> None:
-        """Build the next level, keeping score and lives."""
-        raise NotImplementedError
+        """Advance a cleared level, preserving score, lives, and the cheat."""
+        if self.status != 'level_won':
+            raise ValueError("Only a cleared non-final level can advance")
+
+        # Level number equals the next index.
+        self._load_level(self.level)

@@ -35,6 +35,8 @@ class Direction(Enum):
 
 @dataclass
 class Entity:
+    """A tile position and optional current movement direction."""
+
     pos: Position
     direction: Direction | None = None
 

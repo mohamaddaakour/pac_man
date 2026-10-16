@@ -31,3 +31,12 @@ Status: Not started, In progress, In review (pull request open), Done (merged in
 | B9. Packaging and itch.io | Dev B | TBD | | | Not started | |
 | B10. Tests and README (frontend sections) | Dev B | TBD | | | Not started | |
 | Project management documents | Dev A + Dev B | TBD | 2026-10-08 | | In progress | |
+
+
+## Core implementation update — 2026-10-14
+
+Persistence, application menu/name entry, root entry-point validation, runtime
+hardening, core API handoff, and acceptance/risk documentation are implemented
+in the working tree. Runtime acceptance and lint passed; no merge/PR completion
+is claimed here. Unit tests were excluded by explicit request. Frontend packaging
+and real-display acceptance remain separate tasks.
