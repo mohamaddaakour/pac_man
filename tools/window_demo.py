@@ -20,12 +20,14 @@ def main() -> int:
             image.pixels[:] = (YELLOW * 40 + TRANSPARENT * 40) * 80
 
             def draw(dt: float) -> None:
+                """Redraw the whole frame."""
                 window.clear((0, 0, 80))
                 window.put_image(image, 160, 110)
                 window.put_text(10, 10, "Esc or close button to quit",
                                 (255, 255, 255))
 
             def handle_key(event: KeyEvent) -> None:
+                """Close the window on Esc."""
                 if event.key_code == KEY_ESCAPE:
                     window.close()
 
