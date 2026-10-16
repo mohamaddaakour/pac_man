@@ -41,6 +41,7 @@ class Highscores:
         try:
             # If the file doesn't exist there is nothing to load.
             if not self._path.exists():
+                _warn("Highscore file is missing; starting empty.")
                 return
             # Read the highscore's file content
             raw = self._path.read_text(encoding="utf-8-sig")

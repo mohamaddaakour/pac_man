@@ -13,6 +13,12 @@ AUTO_SIZE_CAP = 21
 
 
 def plan_levels(configured: tuple[LevelSpec, ...]) -> tuple[LevelSpec, ...]:
+    """Plan at least ten levels without changing the supplied configuration.
+
+    Only the first level uses a fixed seed (42 when omitted). Later levels
+    use fresh randomness, including entries that supplied a seed. Generated
+    sizes grow by two up to 21 cells, without shrinking larger custom mazes.
+    """
     if not configured:
         raise ValueError("A campaign needs at least one configured level")
 
@@ -22,6 +28,9 @@ def plan_levels(configured: tuple[LevelSpec, ...]) -> tuple[LevelSpec, ...]:
     # the same and that by providing the same seed
     if levels[0].seed is None:
         levels[0] = replace(levels[0], seed=42)
+
+    for index in range(1, len(levels)):
+        levels[index] = replace(levels[index], seed=None)
 
     while len(levels) < MIN_LEVELS:
         previous = levels[-1]

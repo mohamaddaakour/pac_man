@@ -64,6 +64,11 @@ class GameState:
         # Load level 0 (exposed as level 1) first.
         self._load_level(0)
 
+    @property
+    def total_levels(self) -> int:
+        """Return the expanded campaign length for the HUD."""
+        return len(self.levels)
+
     def _load_level(self, index: int) -> None:
         """Prepare a new maze before committing a transition to this state."""
         spec = self.levels[index]
@@ -109,6 +114,20 @@ class GameState:
     def toggle_invisibility(self) -> None:
         """Toggle normal-ghost protection; edible ghosts still score."""
         self.invisible = not self.invisible
+
+    def skip_level(self) -> None:
+        """Win an active level for review without awarding extra points.
+
+        Preserve score and lives. The last level ends the campaign; otherwise
+        the UI can call next_level() after showing the level transition.
+        Calls outside active play do nothing.
+        """
+        if self.status != 'playing':
+            return
+        self.status = (
+            'game_won' if self.level == self.total_levels else 'level_won'
+        )
+        self._movement_elapsed = 0.0
 
     def update(self, dt: float) -> None:
         """Advance finite non-negative seconds; retain partial tile steps.
@@ -183,7 +202,7 @@ class GameState:
 
             if not self.pacgums and not self.super_pacgums:
                 self.status = (
-                    'game_won' if self.level == len(self.levels)
+                    'game_won' if self.level == self.total_levels
                     else 'level_won'
                 )
 
@@ -205,10 +224,7 @@ class GameState:
             if ghost.state == GhostState.EATEN:
                 ghost.respawn_timer = countdown(ghost.respawn_timer, dt)
                 if ghost.respawn_timer == 0:
-                    ghost.state = (
-                        GhostState.EDIBLE if self.edible_timer > 0
-                        else GhostState.NORMAL
-                    )
+                    ghost.state = GhostState.NORMAL
             elif self.edible_timer == 0:
                 ghost.state = GhostState.NORMAL
             if ghost.state != previous_state:

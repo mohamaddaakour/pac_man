@@ -23,6 +23,7 @@ def write(tmp_path: Path, text: str) -> Path:
 
 
 def load(tmp_path: Path, text: str) -> tuple[Config, list[str]]:
+    """Load temporary JSON while collecting validation messages."""
     messages: list[str] = []
 
     config = load_config(write(tmp_path, text), messages.append)
@@ -132,3 +133,57 @@ def test_parser_integer_limit_raises_config_error(tmp_path: Path) -> None:
     text = '{"lives": ' + '9' * (get_limit() + 1) + '}'
     with pytest.raises(ConfigError, match='parser limits'):
         load(tmp_path, text)
+
+
+def test_json_content_does_not_require_json_extension(tmp_path: Path) -> None:
+    """A valid config can have any filename, as required by the subject."""
+    path = tmp_path / 'settings'
+    path.write_text('{"lives": 4}', encoding='utf-8')
+    assert load_config(path, lambda message: None).lives == 4
+
+
+@pytest.mark.parametrize('value', [float('nan'), float('inf'), '90', True])
+def test_invalid_timer_uses_default(tmp_path: Path, value: object) -> None:
+    """Nonfinite numbers and wrong types never enter the game clock."""
+    config, messages = load(tmp_path, json.dumps({'level_max_time': value}))
+    assert config.level_max_time == 90.0
+    assert any('level_max_time' in message for message in messages)
+
+
+def test_numeric_limits_and_level_validation(tmp_path: Path) -> None:
+    """Clamp unsafe values and report unknown fields inside level objects."""
+    config, messages = load(tmp_path, json.dumps({
+        'level_max_time': -1, 'edible_duration': 100,
+        'points_per_pacgum': -10, 'ghost_respawn_time': 0,
+        'levels': [{'width': 1, 'height': 1000, 'seed': True, 'extra': 1}],
+    }))
+    assert config.level_max_time == 10.0
+    assert config.edible_duration == 60.0
+    assert config.points_per_pacgum == 0
+    assert config.ghost_respawn_time == 1.0
+    assert (config.levels[0].width, config.levels[0].height) == (5, 99)
+    assert config.levels[0].seed is None
+    assert any('extra' in message for message in messages)
+
+
+@pytest.mark.parametrize('value', ['', '  ', 42, False])
+def test_invalid_highscore_path_defaults(
+    tmp_path: Path, value: object,
+) -> None:
+    """Invalid score-path values are repaired with a diagnostic."""
+    config, messages = load(
+        tmp_path, json.dumps({'highscore_filename': value}),
+    )
+    assert config.highscore_filename == 'highscores.json'
+    assert any('highscore_filename' in message for message in messages)
+
+
+def test_invalid_encoding_and_directory_raise_config_error(
+    tmp_path: Path,
+) -> None:
+    """Unreadable text and non-file paths stay inside ConfigError."""
+    path = tmp_path / 'invalid'
+    path.write_bytes(b'\xff\xfe')
+    for candidate in (path, tmp_path):
+        with pytest.raises(ConfigError, match='cannot read'):
+            load_config(candidate)

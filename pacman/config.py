@@ -58,6 +58,7 @@ KNOWN_LEVEL_KEYS = {"width", "height", "seed"}
 
 
 def _print_report(message: str) -> None:
+    """Report a repaired or ignored configuration value to stderr."""
     print(f"[config] {message}", file=sys.stderr)
 
 

@@ -7,7 +7,7 @@ import sys
 from pacman.config import Config, ConfigError, load_config
 from pacman.entities import Direction, GhostState
 from pacman.game_state import GameState
-from pacman.highscore import Highscores
+from pacman.highscore import Highscores, NAME_PATTERN
 from tools.session import load_highscores, score_lines
 from pacman.maze_adapter import MazeError
 
@@ -41,12 +41,13 @@ def play_campaign(config: Config) -> GameState | None:
     """Play until a final result; unfinished games submit no score."""
     state = GameState(config)
     paused = False
-    print('WASD/Enter: move   I: invisible   P: pause   N: next   Q: menu')
+    print('WASD/Enter: move   I: invisible   K: skip level')
+    print('P: pause   N: next cleared level   Q: menu')
     while True:
         print(render_ascii(state))
         remaining = len(state.pacgums) + len(state.super_pacgums)
         print(
-            f'Level: {state.level}/{len(state.levels)} | '
+            f'Level: {state.level}/{state.total_levels} | '
             f'Time: {state.time_left:.1f}s | Score: {state.score} | '
             f'Lives: {state.lives} | Pellets: {remaining} | '
             f'Invisible: {state.invisible} | '
@@ -81,22 +82,28 @@ def play_campaign(config: Config) -> GameState | None:
         if command == 'i':
             state.toggle_invisibility()
             continue
+        if command == 'k':
+            state.skip_level()
+            continue
         if command in KEYS:
             state.set_direction(KEYS[command])
         elif command:
-            print('Use WASD, Enter, I, P, N, or Q.')
+            print('Use WASD, Enter, I, K, P, N, or Q.')
             continue
         state.update(state.STEP_TIME)
 
 
 def submit_score(scores: Highscores, score: int) -> None:
     """Offer one submission; invalid names can be corrected or skipped."""
-    if not scores.qualifies(score):
-        print('This score does not enter the top ten.')
-        return
     while True:
         name = input('Name (1–10 letters/digits/spaces; Enter skips): ')
         if not name:
+            return
+        if not name.strip() or NAME_PATTERN.fullmatch(name) is None:
+            print('Use 1–10 letters, digits, or spaces, not only spaces.')
+            continue
+        if not scores.qualifies(score):
+            print('This score does not enter the top ten; table unchanged.')
             return
         if scores.add(name, score):
             print('Score saved.')
@@ -128,6 +135,7 @@ def main(argv: list[str]) -> int:
             elif choice == 't':
                 print('WASD + Enter moves; Enter continues. I protects you.')
                 print('P: pause; N: next cleared level; Q: menu.')
+                print('K: win the current level immediately (review cheat).')
                 print('Collect pellets; ghosts and timeouts cost lives.')
                 print('Power makes ghosts edible. Clear all levels to win.')
             else:

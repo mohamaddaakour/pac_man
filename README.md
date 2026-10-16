@@ -16,7 +16,7 @@ Both applications provide a menu, instructions, name entry, and saved highscores
 - Level completion when all pellets are eaten
 - Ghost collisions, life loss, entity respawns, and 2 seconds of grace
 - Timed edible ghosts, ghost scoring, and eaten-ghost respawns
-- Invisibility toggle and a graphical integration demo
+- Invisibility toggle, terminal level-skip cheat, and a graphical demo
 - Moving ghosts with BFS chasing, random junction choices, and slower fleeing
 - A campaign of at least ten levels with countdowns and win/lose outcomes
 - Pause/resume and level transitions that preserve score and lives
@@ -41,9 +41,10 @@ top-ten table; scores are saved only after a valid name is submitted.
   every corridor is reachable.
 - Failed generation is retried up to five times after the first attempt.
   If all six attempts fail, we raise `MazeError` with a clear message.
-- Fixed seeds produce repeatable mazes. The sample configuration uses seed 42
-  for level 1 and random seeds for later levels. Generation preserves Python's
-  global random state.
+- Level 1 uses a fixed seed (42 when omitted); every later campaign level uses
+  a random seed, even if its config entry supplies one. Direct adapter calls
+  with a fixed seed remain repeatable. Generation preserves Python's global
+  random state.
 
 In `pacman/entities.py`, positions use `(row, column)`. `Direction` provides
 the four movement vectors, `Entity` stores a position and direction, and
@@ -75,6 +76,11 @@ The required root entry point accepts exactly one JSON config filename:
 ```bash
 python3 pac-man.py config.json
 ```
+
+The filename has no required extension: `python3 pac-man.py settings.txt` also
+works when the file contains valid JSON with the supported comments.
+The current launcher runs the terminal demo; Dev B replaces it with the
+graphical application during B7.
 
 Alternative launch commands:
 
@@ -108,8 +114,9 @@ contact, making that ghost edible and allowing it to be eaten for points.
 
 When both pellet sets are empty, a non-final level sets `status` to `level_won`
 and freezes the core. Press N to continue. Clearing the final level sets
-`game_won`. Either final outcome offers name entry if the score qualifies, then
-returns to the menu. Quitting an unfinished game does not submit a score.
+`game_won`. The terminal offers name entry after either final outcome, then
+returns to the menu. A valid score outside the top ten receives an explanatory
+message without changing the table. Quitting an unfinished game submits nothing.
 
 ## Collisions and invisibility
 
@@ -121,9 +128,10 @@ power. Score and already eaten pellets remain unchanged. A surviving player gets
 
 Super-pacgums refresh power to `edible_duration` seconds. Active ghosts become
 edible; eating one awards `points_per_ghost`, makes it inactive, and teleports it
-to its corner. It returns after `ghost_respawn_time`, edible if power remains
-and normal otherwise. Inactive ghosts cannot hurt the player or score again
-until they return. A new power-up does not revive them early.
+to its corner. It returns as NORMAL after `ghost_respawn_time`, even if the
+previous power timer remains active. Another super-pacgum can make it edible
+again. Inactive ghosts cannot hurt the player or score again until they return.
+A new power-up does not revive them early.
 
 Use `i` followed by Enter in the terminal, or I in the graphical demo, to toggle
 invisibility. This prevents normal-ghost damage while permitting pellet and
@@ -132,7 +140,9 @@ Timers advance in simulated seconds in the terminal and elapsed frame time in
 the graphical demo. The invisibility command itself consumes no terminal time.
 
 Edible ghosts are blue in the graphical demo. Eaten ghosts are hidden in both
-demos. Both applications show the final score and offer eligible name entry. Same-tile and swapped-tile contacts are supported.
+demos. Both show the final score. The older graphical demo still prompts only
+for qualifying scores; the final frontend must offer name entry after every
+completed game. Same-tile and swapped-tile contacts are supported.
 Lethal last-life contact takes priority over level completion.
 
 ## Ghost movement
@@ -162,9 +172,10 @@ request fresh randomness.
 ## Campaign, countdown, and pause
 
 The campaign includes every configured level and extends shorter lists to at
-least ten levels. If the first level omits its seed, it defaults to 42. Appended
-levels use random seeds and grow by two generator cells per side up to 21.
-Larger configured dimensions are preserved, and explicit seeds are honored.
+least ten levels. The first level uses its configured seed, defaulting to 42.
+Every later level uses fresh randomness. Appended levels grow by two generator
+cells per side up to 21, without shrinking larger configured dimensions.
+`GameState.total_levels` exposes the expanded count for a HUD such as LEVEL 3/10.
 
 Each level starts with `level_max_time` seconds. Ghost damage keeps the remaining
 level time. A timeout costs one life, resets positions and the timer, and preserves
@@ -177,6 +188,11 @@ Use N after clearing a level to generate the next maze. Score, lives, and
 invisibility carry forward; pellets, power, movement clocks, and the level timer
 reset. The graphical demo rebuilds its layout and cached walls for the new maze.
 Generation failures display an error and exit with a failure code.
+
+The terminal's K command calls `skip_level()`: an active non-final level becomes
+`level_won`, or the final level becomes `game_won`. It awards no points and
+preserves lives. Press N after each non-final skip. Skipping is ignored while
+paused or outside active play. Dev B can bind the same API in the final UI.
 
 In the terminal, press Enter after each command. Time advances only with accepted
 movement/Enter commands, and waiting for input consumes no time. The graphical
@@ -192,6 +208,7 @@ configured dimensions and desired difficulty.
 | WASD | Request a movement direction |
 | Enter (terminal) | Continue moving and advance simulated time |
 | I | Toggle invisibility during active play |
+| K (terminal) | Win the active level immediately without extra points |
 | P | Pause/resume |
 | N | Advance a cleared non-final level |
 | Q / Esc (graphical) | Return to menu; quit from the menu |
@@ -207,6 +224,7 @@ only spaces are rejected. In the terminal, an empty name skips submission; in th
 window, Backspace edits, Enter saves, and Escape skips. Invalid names or save
 failures can be corrected/retried. A successful submission happens once and is
 shown in the score table. Games played with invisibility remain eligible.
+Level-skip games also remain eligible; skipping itself contributes no score.
 
 ## Configuration
 
@@ -220,7 +238,7 @@ ConfigError. A UTF-8 BOM is accepted.
 | highscore_filename | highscores.json | Nonempty path; relative to the config directory |
 | levels | One 15×15 level, seed 42 | List of width/height/optional seed objects |
 | Level width/height | 15 | Integers clamped to 5–99 generator cells |
-| Level seed | Random when omitted | Integer or null; campaign's first default becomes 42 |
+| Level seed | 42 for level 1; random later | Integer or null; explicit seeds apply only to level 1 during a campaign |
 | lives | 3 | Integer, 1–9 |
 | points_per_pacgum | 10 | Integer, 0–10000 |
 | points_per_super_pacgum | 50 | Integer, 0–10000 |
@@ -242,7 +260,7 @@ their existing order. top10() returns a copy.
 
 JSON is easy to inspect and requires no additional database dependency. The
 manager validates every loaded entry, ignores malformed rows, and uses an empty
-table with a warning for unreadable or corrupt files. Missing files start empty.
+table with a warning for missing, empty, unreadable, or corrupt files.
 It writes a temporary file in the destination directory, flushes/synchronizes it,
 then replaces the target atomically. A failed save returns False, preserves the
 previous in-memory table and existing file, and exposes last_error for the UI.
@@ -281,6 +299,8 @@ Progress and team organization are tracked in [docs/project_management](docs/pro
 The [acceptance checklist](docs/project_management/acceptance.md) and
 [risk notes](docs/project_management/risks.md) cover the core handoff. Documentation
 records implementation and manual/runtime checks separately from unit testing.
+The [Developer A handoff](docs/project_management/dev-a-handoff.md) maps A1–A11
+to their implementation and tests, and lists the remaining integration steps.
 
 ## Resources
 
@@ -290,9 +310,10 @@ records implementation and manual/runtime checks separately from unit testing.
 - [Pygame documentation](https://www.pygame.org/docs/)
 - The assigned mazegenerator wheel's source and metadata document its actual API.
 
-AI assistance was used for roadmap planning, implementation suggestions, bug
-reviews, integration, runtime verification, and documentation. The original
-structure of the highscore manager was retained when applying fixes.
+AI assistance was used for roadmap planning, bug reviews, runtime verification, and documentation.
+terminal submission flow, and A1–A10 regression tests. The original structure of
+the highscore manager was retained when applying fixes. Both developers should
+review and explain their code before the defense.
 
 ## Check the code
 
@@ -301,3 +322,9 @@ python -m pytest -q tests
 python -m flake8 .
 python -m mypy . --warn-return-any --warn-unused-ignores --ignore-missing-imports --disallow-untyped-defs --check-untyped-defs
 ```
+
+Install `requirements.txt` into the interpreter used for these commands.
+On Windows, activate with `.venv\Scripts\Activate.ps1`, or invoke
+`.venv\Scripts\python.exe` directly. GNU Make is optional for running the
+equivalent commands above. See [the test guide](docs/pytest.md) for coverage
+and [the acceptance record](docs/project_management/acceptance.md) for results.
