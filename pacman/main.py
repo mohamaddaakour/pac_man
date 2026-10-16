@@ -1,4 +1,4 @@
-"""Run the current Phase 2 terminal demo."""
+"""Run the phase 5 playable terminal demo."""
 
 import sys
 

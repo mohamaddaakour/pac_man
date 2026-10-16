@@ -1,112 +1,88 @@
-"""Terminal demo of the game core."""
+"""Play the first level with line-based terminal input."""
 
 from __future__ import annotations
 
 import sys
 
 from pacman.config import ConfigError, load_config
-from pacman.entities import (
-    Grid,
-    Position,
-    choose_spawns,
-)
-from pacman.maze_adapter import MazeError, build_grid
+from pacman.entities import Direction, GhostState
+from pacman.game_state import GameState
+from pacman.maze_adapter import MazeError
+
+KEYS = {
+    'w': Direction.UP,
+    'a': Direction.LEFT,
+    's': Direction.DOWN,
+    'd': Direction.RIGHT,
+}
 
 
-def render_ascii(
-    grid: Grid,
-    player: Position,
-    ghosts: tuple[Position, ...],
-) -> str:
-    """Render walls and spawns; ghosts cover their super-pacgums."""
-
-    canvas = [
-        ['#' if tile else ' ' for tile in row]
-        for row in grid
-    ]
-
-    # Super-pacgums
-    for row, col in ghosts:
+def render_ascii(state: GameState) -> str:
+    """Draw pellets, then ghosts, then the player above the grid."""
+    canvas = [['#' if tile else ' ' for tile in row] for row in state.grid]
+    for row, col in state.pacgums:
+        canvas[row][col] = '.'
+    for row, col in state.super_pacgums:
         canvas[row][col] = 'O'
-
-    # Ghosts cover the super-pacgums initially.
-    for number, (row, col) in enumerate(
-        ghosts,
-        start=1,
-    ):
-        canvas[row][col] = str(number)
-
-    player_row, player_col = player
-    canvas[player_row][player_col] = 'P'
-
-    return '\n'.join(
-        ''.join(row)
-        for row in canvas
-    )
+    for number, ghost in enumerate(state.ghosts, start=1):
+        row, col = ghost.pos
+        if ghost.state != GhostState.EATEN:
+            canvas[row][col] = (
+                'e' if ghost.state == GhostState.EDIBLE else str(number)
+            )
+    row, col = state.player.pos
+    canvas[row][col] = 'P'
+    return '\n'.join(''.join(row) for row in canvas)
 
 
 def main(argv: list[str]) -> int:
-    """Run the terminal demo."""
-
-    if len(argv) > 1:
-        path = argv[1]
-    else:
-        path = "config.json"
-
+    """Play one level; initialization errors exit with a readable message."""
+    path = argv[1] if len(argv) > 1 else 'config.json'
     try:
-        config = load_config(path)
-
-        level = config.levels[0]
-
-        grid = build_grid(
-            level.width,
-            level.height,
-            level.seed,
-        )
-
-        player, ghosts = choose_spawns(grid)
-
+        state = GameState(load_config(path))
     except (ConfigError, MazeError) as exc:
-        print(
-            f"Error: {exc}",
-            file=sys.stderr,
-        )
+        print(f'Error: {exc}', file=sys.stderr)
         return 1
 
-    print("Resolved configuration:")
+    print('WASD + Enter: turn; Enter: continue; i: invisibility; q: quit.')
+    print('Each accepted command advances 0.15 simulated seconds.')
+    print('Ghosts chase normally and flee when edible; I prevents damage.')
+    print('Legend: # wall, . pacgum, O super-pacgum, P player, 1–4 ghosts.')
+    print('e = edible ghost; eaten ghosts disappear until they respawn.')
+    print(f'Tile grid: {len(state.grid)} rows x {len(state.grid[0])} columns')
+    try:
+        while True:
+            print(render_ascii(state))
+            remaining = len(state.pacgums) + len(state.super_pacgums)
+            print(
+                f'Score: {state.score} | Lives: {state.lives} | '
+                f'Remaining: {remaining} | '
+                f'Invisible: {state.invisible} | '
+                f'Power: {state.edible_timer:.1f}s '
+                f'| Grace: {state.grace_timer:.1f}s'
+            )
+            if state.status == 'level_won':
+                print('Level complete! Level progression comes in phase 6.')
+                return 0
+            if state.status == 'game_over':
+                print('Game over!')
+                return 0
+            command = input('Move [w/a/s/d, Enter, i, q]: ').strip().lower()
+            if command == 'q':
+                return 0
+            if command == 'i':
+                state.toggle_invisibility()
+                continue  # Toggling the cheat does not consume time.
+            if command in KEYS:
+                state.set_direction(KEYS[command])
+            elif command:
+                print('Use w, a, s, d, Enter, i, or q.')
+                continue  # Invalid input does not advance simulation time.
+            state.update(state.STEP_TIME)
+    except (EOFError, KeyboardInterrupt):
+        print('\nDemo closed.')
+        return 0
 
-    for field, value in vars(config).items():
-        print(f"{field}: {value}")
 
-    print(
-        f"\nTile grid: {len(grid)} rows "
-        f"x {len(grid[0])} columns"
-    )
-
-    print(
-        f"Player: {player}; corners: {ghosts}"
-    )
-
-    print(
-        render_ascii(
-            grid,
-            player,
-            ghosts,
-        )
-    )
-
-    print(
-        "Legend: # wall, P player, "
-        "1-4 ghosts (TL, TR, BL, BR)"
-    )
-
-    print(
-        "Each ghost covers a super-pacgum O "
-        "at its starting position."
-    )
-
-    return 0
-
-
-if __name__ == "__main__":
+if __name__ == '__main__':
     sys.exit(main(sys.argv))
