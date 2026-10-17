@@ -40,6 +40,7 @@ class Config:
 
 
 # (True: must be an integer and False: can be float, default value, min, max)
+# clamp rule: (integer/float, default value, min value, max value)
 NUMERIC_KEYS: dict[str, tuple[bool, float, float, float]] = {
     "lives": (True, 3, 1, 9),
     "points_per_pacgum": (True, 10, 0, 10_000),
