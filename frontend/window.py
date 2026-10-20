@@ -7,7 +7,21 @@ from typing import Callable, Literal
 
 import pygame
 
+KEY_ENTER: int = pygame.K_RETURN
+KEY_KP_ENTER: int = pygame.K_KP_ENTER
 KEY_ESCAPE: int = pygame.K_ESCAPE
+KEY_BACKSPACE: int = pygame.K_BACKSPACE
+KEY_UP: int = pygame.K_UP
+KEY_DOWN: int = pygame.K_DOWN
+KEY_LEFT: int = pygame.K_LEFT
+KEY_RIGHT: int = pygame.K_RIGHT
+KEY_P: int = pygame.K_p
+KEY_I: int = pygame.K_i
+KEY_K: int = pygame.K_k
+SCAN_W: int = pygame.KSCAN_W
+SCAN_A: int = pygame.KSCAN_A
+SCAN_S: int = pygame.KSCAN_S
+SCAN_D: int = pygame.KSCAN_D
 
 
 class GraphicsError(Exception):
@@ -83,6 +97,10 @@ class Window:
         except Exception:
             pygame.quit()
             raise
+
+    def set_key_repeat(self, delay: int, interval: int) -> None:
+        """Repeat a held key after `delay` ms, every `interval` ms."""
+        pygame.key.set_repeat(delay, interval)
 
     def new_image(self, width: int, height: int, opaque: bool) -> Image:
         """Create an image whose pixels live in a bytearray (4 bytes each).

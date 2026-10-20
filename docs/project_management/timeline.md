@@ -23,7 +23,7 @@ Status: Not started, In progress, In review (pull request open), Done (merged in
 | B1. pygame window wrapper | Dev B | TBD | 2026-10-08 | 2026-10-12 | Done | 16 unit tests, `tools/window_demo.py` |
 | B2. Sprites and tile rendering | Dev B | TBD | 2026-10-13 | 2026-10-19 | Done | 45 unit tests, `tools/render_demo.py` |
 | B3. HUD | Dev B | TBD | 2026-10-20 | | In review | 12 unit tests; branch `feature/graphical-app` |
-| B4. Input | Dev B | TBD | | | Not started | |
+| B4. Input | Dev B | TBD | 2026-10-20 | | In review | 40 unit tests; branch `feature/graphical-app` |
 | B5. App state machine | Dev B | TBD | | | Not started | |
 | B6. Screens | Dev B | TBD | | | Not started | |
 | B7. Entry point | Dev B | TBD | | | Not started | |
