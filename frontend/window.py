@@ -75,7 +75,7 @@ class Window:
             except pygame.error as exc:
                 raise GraphicsError(exc) from exc
             pygame.display.set_caption(self.title)
-            self.font: pygame.font.Font = pygame.font.Font(None, 24)
+            self._font: pygame.font.Font = pygame.font.Font(None, 24)
             self.closed: bool = False
             self.key_callback: Callable[[KeyEvent], None] | None = None
             self.close_callback: Callable[[], None] | None = None
@@ -119,7 +119,17 @@ class Window:
     def put_text(self, x: int, y: int, text: str, color: tuple[int, ...]
                  ) -> None:
         """Draw `text` in `color` with its top-left corner at (x, y)."""
-        self.screen.blit(self.font.render(text, False, color), (x, y))
+        self.screen.blit(self._font.render(text, False, color), (x, y))
+
+    def text_size(self, text: str) -> tuple[int, int]:
+        """Return the (width, height) of `text` once drawn.
+
+        Like reading the size of the image mlx_put_string returns.
+        """
+        text_surface: pygame.Surface = self._font.render(
+            text, False, pygame.Color('white')
+        )
+        return text_surface.get_size()
 
     def on_key(self, cb: Callable[[KeyEvent], None]) -> None:
         """Call `cb` with a KeyEvent for every key press."""

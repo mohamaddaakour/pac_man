@@ -1,5 +1,6 @@
 """Draw the maze, dots, sprites and HUD for each frame."""
 
+import math
 from dataclasses import dataclass, replace
 from frontend.window import Window, Image
 from frontend.layout import Layout, compute_layout, to_pixels
@@ -7,6 +8,12 @@ from frontend.sprites import disc, pacman, ghost, eyes
 from frontend.protocols import GameStateProtocol
 from frontend.constants import (Color,
                                 HUD_HEIGHT,
+                                HUD_TEXT_COLOR,
+                                HUD_CHEAT_COLOR,
+                                HUD_WARNING_COLOR,
+                                HUD_MARGIN,
+                                HUD_COLUMN_WIDTH,
+                                ICON_SIZE,
                                 MAX_TILE,
                                 BACKGROUND_COLOR,
                                 WALL_COLOR,
@@ -20,8 +27,29 @@ from frontend.constants import (Color,
                                 SUPER_PACGUM_RADIUS,
                                 MOUTH_PERIOD,
                                 BLINK_START,
-                                BLINK_PERIOD)
+                                BLINK_PERIOD,
+                                WARNING_THRESHOLD)
 from pacman.entities import Direction, GhostState, Grid, Position
+
+
+def hud_items(state: GameStateProtocol) -> list[tuple[str, Color]]:
+    """Return the HUD texts and their colours, left to right.
+
+    The time is rounded up so 0 only shows at the real timeout, and
+    it turns to the warning colour in the last seconds. INVISIBLE
+    is only listed while the cheat is on. Lives are drawn apart.
+    """
+    items: list[tuple[str, Color]] = [
+        (f"SCORE {state.score}", HUD_TEXT_COLOR),
+        (f"LEVEL {state.level}/{state.total_levels}", HUD_TEXT_COLOR),
+        (f"TIME {math.ceil(state.time_left)}",
+         (HUD_WARNING_COLOR
+          if state.time_left <= WARNING_THRESHOLD
+          else HUD_TEXT_COLOR)),
+    ]
+    if state.invisible:
+        items.append(("INVISIBLE", HUD_CHEAT_COLOR))
+    return items
 
 
 @dataclass
@@ -54,6 +82,9 @@ class Renderer:
         self._clock: float = 0.0
         self._last_direction: Direction = Direction.RIGHT
         self._level: _Level | None = None
+        self._life_icon: Image = self._window.new_image(
+            ICON_SIZE, ICON_SIZE, False)
+        self._life_icon.pixels[:] = pacman(ICON_SIZE, Direction.RIGHT, True)
 
     def _put_tile(self,
                   background: Image,
@@ -249,3 +280,29 @@ class Renderer:
         x, y = to_pixels(level.window_layout, state.player.pos)
         self._window.put_image(level.pacman_images[
             (self._last_direction, mouth_open)], x, y)
+        self._draw_hud(state)
+
+    def _draw_hud(self, state: GameStateProtocol) -> None:
+        """Draw the lives, then every HUD item in its own column."""
+        _, text_height = self._window.text_size("LIVES:")
+        y: int = (HUD_HEIGHT - text_height) // 2
+        self._draw_lives(HUD_MARGIN, y, state.lives)
+        items: list[tuple[str, Color]] = hud_items(state)
+        for i, (text, color) in enumerate(items):
+            x: int = HUD_MARGIN + (i + 1) * HUD_COLUMN_WIDTH
+            self._window.put_text(x, y, text, color)
+
+    def _draw_lives(self, x: int, y: int, lives: int) -> None:
+        """Draw the lives as a label, a Pac-Man icon and a count."""
+        color: Color = HUD_TEXT_COLOR
+        label: str = "LIVES:"
+        label_width: int = self._window.text_size(label)[0]
+        label_height: int = self._window.text_size(label)[1]
+        icon_offset: int = (label_height - self._life_icon.height) // 2 - 3
+        self._window.put_text(x, y, label, color)
+        self._window.put_image(self._life_icon,
+                               x + label_width + 10,
+                               y + icon_offset)
+        self._window.put_text(x + label_width + 30,
+                              y,
+                              f"x {lives}", color)

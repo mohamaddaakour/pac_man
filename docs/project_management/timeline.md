@@ -15,19 +15,19 @@ Status: Not started, In progress, In review (pull request open), Done (merged in
 | A5. Pacgums | Dev A | TBD | 2026-10-12 | 2026-10-12 | Done | Merged with A4 |
 | A6. Ghost AI | Dev A | TBD | 2026-10-12 | 2026-10-13 | Done | |
 | A7. Collisions, lives, invisibility | Dev A | TBD | 2026-10-12 | 2026-10-12 | Done | |
-| A8. Timer, levels, win/lose | Dev A | TBD | 2026-10-12 | | In progress | `level_won` and `game_over` set; timer and `next_level()` pending |
-| A9. Highscores | Dev A | TBD | | | Not started | |
-| A10. Tests and CLI demo | Dev A | TBD | | | Not started | |
-| A11. README (core sections) | Dev A | TBD | | | Not started | |
+| A8. Timer, levels, win/lose | Dev A | TBD | 2026-10-12 | 2026-10-16 | Done | At least 10 levels, `total_levels`, `skip_level()` cheat |
+| A9. Highscores | Dev A | TBD | 2026-10-14 | 2026-10-16 | Done | Validated top 10, atomic save |
+| A10. Tests and CLI demo | Dev A | TBD | 2026-10-14 | 2026-10-16 | Done | Terminal demo; core tests (219 in the full suite) |
+| A11. README (core sections) | Dev A | TBD | 2026-10-14 | 2026-10-16 | Done | Plus `docs/core-api.md` and the handoff |
 | Frontend file skeleton | Dev B | TBD | 2026-10-08 | 2026-10-08 | Done | |
 | B1. pygame window wrapper | Dev B | TBD | 2026-10-08 | 2026-10-12 | Done | 16 unit tests, `tools/window_demo.py` |
-| B2. Sprites and tile rendering | Dev B | TBD | 2026-10-13 | | In review | 45 unit tests, `tools/render_demo.py` |
-| B3. HUD | Dev B | TBD | | | Not started | |
+| B2. Sprites and tile rendering | Dev B | TBD | 2026-10-13 | 2026-10-19 | Done | 45 unit tests, `tools/render_demo.py` |
+| B3. HUD | Dev B | TBD | 2026-10-20 | | In review | 12 unit tests; branch `feature/graphical-app` |
 | B4. Input | Dev B | TBD | | | Not started | |
 | B5. App state machine | Dev B | TBD | | | Not started | |
 | B6. Screens | Dev B | TBD | | | Not started | |
 | B7. Entry point | Dev B | TBD | | | Not started | |
-| B8. Integration with the core | Dev A + Dev B | TBD | | | Not started | The core it needs (A3–A7) is merged |
+| B8. Integration with the core | Dev A + Dev B | TBD | | | Not started | The whole core is merged |
 | B9. Packaging and itch.io | Dev B | TBD | | | Not started | |
 | B10. Tests and README (frontend sections) | Dev B | TBD | | | Not started | |
 | Project management documents | Dev A + Dev B | TBD | 2026-10-08 | | In progress | |

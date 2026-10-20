@@ -66,6 +66,11 @@ class GameStateProtocol(Protocol):
         ...
 
     @property
+    def total_levels(self) -> int:
+        """Total number of planned levels."""
+        ...
+
+    @property
     def time_left(self) -> float:
         """Seconds left to clear the level."""
         ...

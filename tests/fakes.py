@@ -19,6 +19,7 @@ class FakeState:
     score: int = 0
     lives: int = 3
     level: int = 1
+    total_levels: int = 10
     time_left: float = 90.0
     edible_timer: float = 0.0
     status: str = 'playing'

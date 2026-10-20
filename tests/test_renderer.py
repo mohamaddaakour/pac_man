@@ -9,14 +9,17 @@ import pytest
 
 from frontend.constants import (
     BACKGROUND_COLOR, CORRIDOR_COLOR, EDIBLE_BLINK_COLOR, EDIBLE_COLOR,
-    EYES_COLOR, GHOST_COLORS, HUD_HEIGHT, MAX_TILE, MOUTH_PERIOD,
+    EYES_COLOR, GHOST_COLORS, HUD_CHEAT_COLOR, HUD_COLUMN_WIDTH, HUD_HEIGHT,
+    HUD_MARGIN, HUD_TEXT_COLOR, HUD_WARNING_COLOR, MAX_TILE, MOUTH_PERIOD,
     PACGUM_COLOR, PACMAN_COLOR, SUPER_PACGUM_COLOR, WALL_COLOR,
     WINDOW_HEIGHT, WINDOW_WIDTH,
 )
 from frontend.layout import Layout, compute_layout
-from frontend.renderer import Renderer
+from frontend.renderer import Renderer, hud_items
 from frontend.window import Window
 from pacman.entities import Direction, GhostState, Position
+from pacman.game_state import GameState
+from tests.core_helpers import make_config
 from tests.fakes import FakeState, make_state, open_grid
 
 Pixel = tuple[int, int]
@@ -238,3 +241,82 @@ def test_new_grid_rebuilds_the_level(window: Window) -> None:
 
     assert colour(centre(layout, (14, 20))) == WALL_COLOR
     assert colour(centre(layout, (7, 10))) == CORRIDOR_COLOR
+
+
+def hud_column(column: int) -> set[tuple[int, ...]]:
+    """Return every colour drawn in one HUD column (0 is the lives)."""
+
+    left = HUD_MARGIN + column * HUD_COLUMN_WIDTH
+    return {
+        colour((x, y))
+        for x in range(left, min(left + HUD_COLUMN_WIDTH, WINDOW_WIDTH))
+        for y in range(HUD_HEIGHT)
+    }
+
+
+def test_hud_items_show_score_level_and_time() -> None:
+    state = make_state()
+    state.score, state.level, state.total_levels = 1230, 3, 12
+
+    assert hud_items(state) == [
+        ('SCORE 1230', HUD_TEXT_COLOR),
+        ('LEVEL 3/12', HUD_TEXT_COLOR),
+        ('TIME 90', HUD_TEXT_COLOR),
+    ]
+
+
+@pytest.mark.parametrize('left, shown, warning', [
+    (90.0, 'TIME 90', False),
+    (89.2, 'TIME 90', False),   # rounded up: 0 only at the real timeout
+    (10.01, 'TIME 11', False),
+    (10.0, 'TIME 10', True),
+    (0.4, 'TIME 1', True),
+    (0.0, 'TIME 0', True),
+])
+def test_hud_time_rounds_up_and_warns_at_ten_seconds(
+    left: float, shown: str, warning: bool,
+) -> None:
+    state = make_state()
+    state.time_left = left
+    text, hud_colour = hud_items(state)[2]
+
+    assert text == shown
+    assert hud_colour == (HUD_WARNING_COLOR if warning else HUD_TEXT_COLOR)
+
+
+def test_hud_shows_invisible_only_while_the_cheat_is_on() -> None:
+    state = make_state()
+    assert all(text != 'INVISIBLE' for text, _ in hud_items(state))
+
+    state.invisible = True
+    assert hud_items(state)[-1] == ('INVISIBLE', HUD_CHEAT_COLOR)
+
+
+def test_hud_items_accept_the_real_game_state() -> None:
+    state = GameState(make_config())
+
+    assert hud_items(state)[1][0] == f'LEVEL 1/{state.total_levels}'
+    assert state.total_levels >= 10
+
+
+def test_hud_is_drawn_in_the_band(window: Window) -> None:
+    state = make_state()
+    state.invisible = True
+    state.time_left = 5.0
+    Renderer(window).draw(state, 0.0)
+
+    assert PACMAN_COLOR in hud_column(0)          # life icon
+    assert HUD_TEXT_COLOR in hud_column(1)        # score
+    assert HUD_TEXT_COLOR in hud_column(2)        # level
+    assert HUD_WARNING_COLOR in hud_column(3)     # time, 5 s left
+    assert HUD_CHEAT_COLOR in hud_column(4)       # invisible
+
+
+def test_hud_hides_invisible_and_warning_when_not_needed(
+    window: Window,
+) -> None:
+    state = make_state()
+    Renderer(window).draw(state, 0.0)
+
+    assert HUD_WARNING_COLOR not in hud_column(3)
+    assert hud_column(4) == {BACKGROUND_COLOR}

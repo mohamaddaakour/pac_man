@@ -158,3 +158,12 @@ def test_with_block_releases_pygame_without_run() -> None:
     with Window(64, 48, 'test', headless_ok=True):
         pass
     assert not pygame.display.get_init()
+
+
+def test_text_size_grows_with_the_text(window: Window) -> None:
+    short_width, short_height = window.text_size('HI')
+    long_width, long_height = window.text_size('HIHI')
+
+    assert short_width > 0 and short_height > 0
+    assert long_width > short_width
+    assert long_height == short_height
