@@ -90,9 +90,31 @@ class GameStateProtocol(Protocol):
         """True while the invisibility cheat is on."""
         ...
 
+    def update(self, dt: float) -> None:
+        """Advance the game by `dt` seconds."""
+        ...
+
+    def set_direction(self, direction: Direction) -> None:
+        """Ask Pac-Man to turn as soon as possible."""
+        ...
+
+    def toggle_invisibility(self) -> None:
+        """Flip the invisibility cheat."""
+        ...
+
+    def skip_level(self) -> None:
+        """Win the current level at once (cheat)."""
+        ...
+
+    def next_level(self) -> None:
+        """Build the next level after a cleared one."""
+        ...
+
 
 class HighscoresProtocol(Protocol):
     """What the frontend uses from the highscore table."""
+
+    last_error: str | None
 
     def load(self) -> None:
         """Read the table from disk."""

@@ -24,7 +24,7 @@ Status: Not started, In progress, In review (pull request open), Done (merged in
 | B2. Sprites and tile rendering | Dev B | TBD | 2026-10-13 | 2026-10-19 | Done | 45 unit tests, `tools/render_demo.py` |
 | B3. HUD | Dev B | TBD | 2026-10-20 | | In review | 12 unit tests; branch `feature/graphical-app` |
 | B4. Input | Dev B | TBD | 2026-10-20 | | In review | 40 unit tests; branch `feature/graphical-app` |
-| B5. App state machine | Dev B | TBD | | | Not started | |
+| B5. App state machine | Dev B | TBD | 2026-10-21 | | In review | 26 unit tests; branch `feature/graphical-app` |
 | B6. Screens | Dev B | TBD | | | Not started | |
 | B7. Entry point | Dev B | TBD | | | Not started | |
 | B8. Integration with the core | Dev A + Dev B | TBD | | | Not started | The whole core is merged |

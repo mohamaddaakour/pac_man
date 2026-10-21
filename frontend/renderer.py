@@ -86,6 +86,12 @@ class Renderer:
             ICON_SIZE, ICON_SIZE, False)
         self._life_icon.pixels[:] = pacman(ICON_SIZE, Direction.RIGHT, True)
 
+    def reset(self) -> None:
+        """Forget the level and the animations, for a new game."""
+        self._clock = 0.0
+        self._last_direction = Direction.RIGHT
+        self._level = None
+
     def _put_tile(self,
                   background: Image,
                   tile: int,
