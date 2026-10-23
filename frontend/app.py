@@ -12,14 +12,7 @@ from frontend.input_handler import (
     direction_of,
     NameEntry
 )
-from frontend.screens import (
-    draw_menu,
-    draw_instructions,
-    draw_highscores,
-    draw_transition,
-    draw_pause,
-    draw_game_end
-)
+from frontend.screens import Screens
 from frontend.constants import (
     TRANSITION_TIME,
     MESSAGE_TIME,
@@ -71,6 +64,7 @@ class App:
         self.config: Config = config
         self.highscores: HighscoresProtocol = highscores
         self.new_game: Callable[[Config], GameStateProtocol] = new_game
+        self.screens: Screens = Screens(self.window, self.config)
         self.renderer: Renderer = Renderer(self.window)
         self.mode: Mode = Mode.MENU
         self.state: GameStateProtocol | None = None
@@ -195,11 +189,12 @@ class App:
                 self.message = None
         if self.state is None:
             if self.mode == Mode.MENU:
-                draw_menu(self.window, self.menu_selected, self.message)
+                self.screens.draw_menu(self.menu_selected,
+                                       self.highscores, self.message)
             elif self.mode == Mode.INSTRUCTIONS:
-                draw_instructions(self.window)
+                self.screens.draw_instructions()
             elif self.mode == Mode.HIGHSCORES:
-                draw_highscores(self.window, self.highscores)
+                self.screens.draw_highscores(self.highscores)
             return
         if self.mode == Mode.PLAYING:
             self.state.update(dt)
@@ -220,19 +215,20 @@ class App:
                 self._finish_game(False)
         elif self.mode == Mode.PAUSED:
             self.renderer.draw(self.state, 0)
-            draw_pause(self.window, self.pause_selected)
+            self.screens.draw_pause(self.pause_selected)
         elif self.mode == Mode.LEVEL_TRANSITION:
             self.transition_timer = max(0.0, self.transition_timer - dt)
-            draw_transition(self.window, self.state.level)
+            self.renderer.draw(self.state, 0)
+            self.screens.draw_transition(self.state.level,
+                                         self.state.total_levels)
             if self.transition_timer <= 0:
                 self.mode = Mode.PLAYING
         elif self.mode == Mode.GAME_END:
-            draw_game_end(self.window,
-                          self.final_score,
-                          self.won,
-                          self.name_entry,
-                          self.can_save,
-                          self.message or "")
+            self.screens.draw_game_end(self.final_score,
+                                       self.won,
+                                       self.name_entry,
+                                       self.can_save,
+                                       self.message or "")
 
     def _finish_game(self, won: bool) -> None:
         """Show the end screen; ask a name only for a top 10 score."""

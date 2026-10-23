@@ -149,6 +149,21 @@ class Window:
         )
         return text_surface.get_size()
 
+    def text_pixels(self,
+                    text: str,
+                    color: tuple[int, ...]) -> tuple[bytes, int, int]:
+        """Return the RGBA pixels, width and height of drawn `text`.
+
+        Like reading the pixels of the image mlx_put_string returns.
+        """
+        surface: pygame.Surface = self._font.render(
+           text, False, color
+        )
+        return (
+           pygame.image.tobytes(surface, "RGBA"),
+           *surface.get_size()
+        )
+
     def on_key(self, cb: Callable[[KeyEvent], None]) -> None:
         """Call `cb` with a KeyEvent for every key press."""
         self.key_callback = cb

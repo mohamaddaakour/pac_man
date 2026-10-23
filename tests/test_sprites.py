@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 
 from frontend.constants import EYES_COLOR, PACMAN_COLOR
-from frontend.sprites import disc, eyes, ghost, pacman
+from frontend.sprites import disc, eyes, ghost, pacman, scale_up
 from pacman.entities import Direction
 
 RED = (255, 0, 0)
@@ -104,3 +104,23 @@ def test_eyes_are_two_separate_eyes_in_eyes_colour() -> None:
     assert middle_row[5:7] == '..'
     x = middle_row.index('#')
     assert rgb(pixels, 12, x, 5) == EYES_COLOR
+
+
+def test_scale_up_turns_each_pixel_into_a_block() -> None:
+    red, blue = bytes((255, 0, 0, 255)), bytes((0, 0, 255, 255))
+    big = scale_up(red + blue, 2, 1, 2)       # 2x1 image, twice as big
+
+    assert big == (red * 2 + blue * 2) * 2    # two identical 4-pixel rows
+
+
+@pytest.mark.parametrize('factor', [1, 3])
+def test_scale_up_keeps_every_byte_in_place(factor: int) -> None:
+    pixels = bytes(range(2 * 3 * 4))          # 2x3 image, all bytes differ
+    big = scale_up(pixels, 2, 3, factor)
+
+    assert len(big) == 2 * 3 * factor * factor * 4
+    for y in range(3 * factor):
+        for x in range(2 * factor):
+            source = ((y // factor) * 2 + x // factor) * 4
+            target = (y * 2 * factor + x) * 4
+            assert big[target:target + 4] == pixels[source:source + 4]

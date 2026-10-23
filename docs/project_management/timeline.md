@@ -25,7 +25,7 @@ Status: Not started, In progress, In review (pull request open), Done (merged in
 | B3. HUD | Dev B | TBD | 2026-10-20 | | In review | 12 unit tests; branch `feature/graphical-app` |
 | B4. Input | Dev B | TBD | 2026-10-20 | | In review | 40 unit tests; branch `feature/graphical-app` |
 | B5. App state machine | Dev B | TBD | 2026-10-21 | | In review | 26 unit tests; branch `feature/graphical-app` |
-| B6. Screens | Dev B | TBD | | | Not started | |
+| B6. Screens | Dev B | TBD | 2026-10-22 | | In review | 18 unit tests; branch `feature/graphical-app` |
 | B7. Entry point | Dev B | TBD | | | Not started | |
 | B8. Integration with the core | Dev A + Dev B | TBD | | | Not started | The whole core is merged |
 | B9. Packaging and itch.io | Dev B | TBD | | | Not started | |

@@ -167,3 +167,14 @@ def test_text_size_grows_with_the_text(window: Window) -> None:
     assert short_width > 0 and short_height > 0
     assert long_width > short_width
     assert long_height == short_height
+
+
+def test_text_pixels_match_the_drawn_text(window: Window) -> None:
+    pixels, width, height = window.text_pixels('HI', (255, 255, 0))
+
+    assert (width, height) == window.text_size('HI')
+    assert len(pixels) == width * height * 4
+    assert any(
+        pixels[i:i + 4] == bytes((255, 255, 0, 255))
+        for i in range(0, len(pixels), 4)
+    )
