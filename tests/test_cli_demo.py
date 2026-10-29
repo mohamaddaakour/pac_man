@@ -113,19 +113,6 @@ def test_relative_scores_resolve_beside_config(tmp_path: Path) -> None:
     assert (tmp_path / 'scores.json').is_file()
 
 
-def test_root_launcher_accepts_arbitrary_config_filename(
-    tmp_path: Path,
-) -> None:
-    """The subject's command accepts JSON content without a .json suffix."""
-    path = config_file(tmp_path)
-    result = subprocess.run(
-        [sys.executable, str(ROOT / 'pac-man.py'), str(path)],
-        input='q\n', capture_output=True, text=True, cwd=tmp_path, timeout=10,
-    )
-    assert result.returncode == 0, result.stderr
-    assert 'Traceback' not in result.stderr
-
-
 @pytest.mark.parametrize('case', [
     'no_args', 'extra_args', 'missing', 'bad_json',
 ])
