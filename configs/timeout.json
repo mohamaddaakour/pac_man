@@ -1,0 +1,15 @@
+# Shortest allowed timer: each timeout costs a life.
+# Press I first so the ghosts cannot touch you, then wait.
+{
+    "highscore_filename": "highscores.json",
+    "levels": [
+        {"width": 15, "height": 15, "seed": 42}
+    ],
+    "lives": 3,
+    "points_per_pacgum": 10,
+    "points_per_super_pacgum": 50,
+    "points_per_ghost": 200,
+    "level_max_time": 10,
+    "edible_duration": 10,
+    "ghost_respawn_time": 5
+}

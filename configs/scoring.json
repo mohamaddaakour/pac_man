@@ -1,0 +1,15 @@
+# Easy-to-read scores: pacgum +1, super-pacgum +10, ghost +100.
+# Long levels so every rule can be checked calmly; K skips a level.
+{
+    "highscore_filename": "highscores.json",
+    "levels": [
+        {"width": 15, "height": 15, "seed": 42}
+    ],
+    "lives": 3,
+    "points_per_pacgum": 1,
+    "points_per_super_pacgum": 10,
+    "points_per_ghost": 100,
+    "level_max_time": 3600,
+    "edible_duration": 10,
+    "ghost_respawn_time": 5
+}
