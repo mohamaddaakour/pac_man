@@ -161,17 +161,16 @@ class App:
             elif selected_pause_item == "MAIN MENU":
                 self._return_to_menu()
         elif self.mode == Mode.GAME_END:
-            if self.can_save:
-                result: NameResult = self.name_entry.handle(event)
-                if result == NameResult.SUBMIT:
-                    if self.highscores.add(self.name_entry.text,
-                                           self.final_score):
-                        self._return_to_menu("Highscore saved!")
-                    else:
-                        self.message = self.highscores.last_error
-                elif result == NameResult.CANCEL:
-                    self._return_to_menu()
-            elif action in (Action.CONFIRM, Action.BACK):
+            result: NameResult = self.name_entry.handle(event)
+            if result == NameResult.SUBMIT:
+                if not self.can_save:
+                    self._return_to_menu("Not in the top 10: score not saved")
+                elif self.highscores.add(self.name_entry.text,
+                                         self.final_score):
+                    self._return_to_menu("Highscore saved!")
+                else:
+                    self.message = self.highscores.last_error
+            elif result == NameResult.CANCEL:
                 self._return_to_menu()
 
     def on_frame(self, dt: float) -> None:
@@ -227,17 +226,20 @@ class App:
             self.screens.draw_game_end(self.final_score,
                                        self.won,
                                        self.name_entry,
-                                       self.can_save,
                                        self.message or "")
 
     def _finish_game(self, won: bool) -> None:
-        """Show the end screen; ask a name only for a top 10 score."""
+        """Show the end screen and ask for a name after every game.
+
+        `can_save` records whether the score enters the top 10; when it
+        does not, submitting the name returns to the menu unsaved.
+        """
         self.won = won
         self.final_score = self.state.score if self.state else 0
         self.can_save = self.highscores.qualifies(self.final_score)
         self.name_entry = NameEntry()
         self.message = None
-        self._set_name_entry_repeat(self.can_save)
+        self._set_name_entry_repeat(True)
         self.mode = Mode.GAME_END
 
     def _return_to_menu(self, message: str | None = None) -> None:

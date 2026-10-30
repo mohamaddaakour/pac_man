@@ -86,7 +86,10 @@ def ghost(size: int, color: Color) -> bytes:
 
 
 def eyes(size: int) -> bytes:
-    """Return RGBA pixels of two eyes, the look of an eaten ghost."""
+    """Return RGBA pixels of two eyes, drawn over every ghost.
+
+    An eaten ghost shows only its eyes.
+    """
     pixels: bytearray = bytearray((size ** 2) * 4)
     center: float = (size - 1) / 2
     eye_y: float = (2 * size) / 5

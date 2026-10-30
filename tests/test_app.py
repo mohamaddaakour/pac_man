@@ -313,15 +313,16 @@ def test_escape_on_the_end_screen_saves_nothing(window: Window) -> None:
     assert table.entries == []
 
 
-def test_score_outside_the_top_ten_skips_the_name(window: Window) -> None:
+def test_score_outside_the_top_ten_still_asks_a_name(window: Window) -> None:
     app, _, table = ended(window, scores=FakeHighscores(qualify=False))
 
     assert not app.can_save
     type_text(app, 'GM')
-    assert app.name_entry.text == ''
+    assert app.name_entry.text == 'GM'
     app.on_key(ENTER)
 
     assert mode(app) == Mode.MENU
+    assert app.message == 'Not in the top 10: score not saved'
     assert table.entries == []
 
 
@@ -380,8 +381,11 @@ def test_maze_error_at_level_change_returns_to_the_menu(
     assert app.state is None
 
 
-def test_key_repeat_only_while_typing_a_name(window: Window) -> None:
-    app, game, _ = playing(window)
+@pytest.mark.parametrize('qualify', [True, False])
+def test_key_repeat_only_while_typing_a_name(
+    window: Window, qualify: bool,
+) -> None:
+    app, game, _ = playing(window, scores=FakeHighscores(qualify=qualify))
     assert pygame.key.get_repeat() == (0, 0)
 
     game.status = 'game_over'

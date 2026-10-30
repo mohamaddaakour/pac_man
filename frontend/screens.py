@@ -213,15 +213,15 @@ class Screens:
                       score: int,
                       won: bool,
                       name_entry: NameEntry,
-                      can_save: bool,
                       message: str) -> None:
         """Draw the game over or victory screen with the final score.
+
+        The name prompt is shown after every game, as the subject asks.
 
         Args:
             score: Final score of the game.
             won: True after the last level, False after losing.
             name_entry: The name being typed.
-            can_save: Ask for a name, or explain the score is too low.
             message: Error from the last save attempt, or empty.
         """
         y: int = self._draw_title(self.victory_title
@@ -230,23 +230,14 @@ class Screens:
         self._draw_centered(y, f"Final score: {score}")
         _, height = self.window.text_size(f"Final score: {score}")
         y += height + 25
-        if can_save:
-            self._draw_centered(y, "Enter your name:")
-            _, height = self.window.text_size("Enter your name:")
-            y += height + 10
-            self._draw_centered(y, name_entry.text + "_")
-            _, height = self.window.text_size(name_entry.text + "_")
-            y += height + 15
-            self._draw_centered(y, "Enter: Save    Esc: Cancel", HINT_COLOR)
-            _, height = self.window.text_size("Enter: Save    Esc: Cancel")
-            y += height + 10
-        else:
-            self._draw_centered(y, "Your score didn't qualify for the top 10.")
-            _, height = self.window.text_size(
-                "Your score didn't qualify for the top 10.")
-            y += height + 15
-            self._draw_centered(y, "Enter or Esc: Return to menu", HINT_COLOR)
-            _, height = self.window.text_size("Enter or Esc: Return to menu")
-            y += height + 10
+        self._draw_centered(y, "Enter your name:")
+        _, height = self.window.text_size("Enter your name:")
+        y += height + 10
+        self._draw_centered(y, name_entry.text + "_")
+        _, height = self.window.text_size(name_entry.text + "_")
+        y += height + 15
+        self._draw_centered(y, "Enter: Save    Esc: Cancel", HINT_COLOR)
+        _, height = self.window.text_size("Enter: Save    Esc: Cancel")
+        y += height + 10
         if message:
             self._draw_centered(y, message, ERROR_COLOR)

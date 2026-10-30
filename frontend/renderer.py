@@ -11,12 +11,13 @@ from frontend.constants import (Color,
                                 HUD_TEXT_COLOR,
                                 HUD_CHEAT_COLOR,
                                 HUD_WARNING_COLOR,
-                                HUD_MARGIN,
-                                HUD_COLUMN_WIDTH,
+                                HUD_SLOTS,
+                                HUD_MIN_WIDTH,
                                 ICON_SIZE,
                                 MAX_TILE,
                                 BACKGROUND_COLOR,
                                 WALL_COLOR,
+                                PATTERN_COLOR_42,
                                 CORRIDOR_COLOR,
                                 PACGUM_COLOR,
                                 SUPER_PACGUM_COLOR,
@@ -50,6 +51,34 @@ def hud_items(state: GameStateProtocol) -> list[tuple[str, Color]]:
     if state.invisible:
         items.append(("INVISIBLE", HUD_CHEAT_COLOR))
     return items
+
+
+def pattern_42_tiles(grid: Grid) -> set[Position]:
+    """Return the wall tiles that form the maze's 42 pattern.
+
+    They are the walls surrounded by walls on all eight sides; tiles
+    outside the grid count as open, so the border is never included.
+    Any other wall touches a corridor, because the middle of every open
+    cell is one.
+    """
+    rows: int = len(grid)
+    cols: int = len(grid[0])
+    result: set[Position] = set()
+    for row in range(rows):
+        for col in range(cols):
+            if not grid[row][col]:
+                continue
+            surrounded: bool = all(
+                0 <= row + dr < rows
+                and 0 <= col + dc < cols
+                and grid[row + dr][col + dc]
+                for dr in (-1, 0, 1)
+                for dc in (-1, 0, 1)
+                if dr != 0 or dc != 0
+            )
+            if surrounded:
+                result.add((row, col))
+    return result
 
 
 @dataclass
@@ -153,8 +182,9 @@ class Renderer:
     def build_level(self, state: GameStateProtocol) -> None:
         """Compute the layout, then build the background and the sprites.
 
-        The background holds the walls, the corridors and the dots, so a
-        frame only draws one large image and five sprites.
+        The background holds the walls (the 42 pattern in its own
+        colour), the corridors and the dots, so a frame only draws one
+        large image, the ghosts with their eyes, and Pac-Man.
         """
         rows, cols = len(state.grid), len(state.grid[0])
         old_layout: Layout = compute_layout(rows,
@@ -168,6 +198,8 @@ class Renderer:
         grid: Grid = state.grid
         tile: int = window_layout.tile
         wall: bytes = self._solid_tile(tile, WALL_COLOR)
+        pattern_42: bytes = self._solid_tile(tile, PATTERN_COLOR_42)
+        special_42_tiles: set[Position] = pattern_42_tiles(grid)
         corridor: bytes = self._solid_tile(tile, CORRIDOR_COLOR)
         pacgum_on_corridor: bytes = self._make_pacgum_tile(
             tile,
@@ -183,7 +215,10 @@ class Renderer:
         for row in range(rows):
             for col in range(cols):
                 if state.grid[row][col]:
-                    self._put_tile(background, tile, row, col, wall)
+                    tile_pattern: bytes = (
+                        pattern_42 if (row, col) in special_42_tiles else wall
+                    )
+                    self._put_tile(background, tile, row, col, tile_pattern)
                 elif (row, col) in state.super_pacgums:
                     self._put_tile(
                         background, tile, row, col, super_pacgum_on_corridor)
@@ -263,7 +298,7 @@ class Renderer:
         self._window.put_image(level.background, x, y)
         for index, _ghost in enumerate(state.ghosts):
             if _ghost.state == GhostState.EATEN:
-                image: Image = level.eyes_image
+                image: Image | None = None
             elif _ghost.state == GhostState.EDIBLE:
                 blinking: bool = (state.edible_timer < BLINK_START
                                   and int(
@@ -276,7 +311,9 @@ class Renderer:
             else:
                 raise ValueError("invalid ghost state")
             x, y = to_pixels(level.window_layout, _ghost.pos)
-            self._window.put_image(image, x, y)
+            if image is not None:
+                self._window.put_image(image, x, y)
+            self._window.put_image(level.eyes_image, x, y)
         direction: Direction | None = state.player.direction
         mouth_open: bool = True
         if direction is not None:
@@ -286,16 +323,25 @@ class Renderer:
         x, y = to_pixels(level.window_layout, state.player.pos)
         self._window.put_image(level.pacman_images[
             (self._last_direction, mouth_open)], x, y)
-        self._draw_hud(state)
+        self._draw_hud(state, level)
 
-    def _draw_hud(self, state: GameStateProtocol) -> None:
-        """Draw the lives, then every HUD item in its own column."""
+    def _draw_hud(self, state: GameStateProtocol, level: _Level) -> None:
+        """Draw the lives and the HUD items in fixed slots above the maze.
+
+        The HUD spans the maze width, or HUD_MIN_WIDTH when the maze is
+        narrower, centred like the maze. INVISIBLE keeps its own slot, so
+        the other items never move.
+        """
         _, text_height = self._window.text_size("LIVES:")
-        y: int = (HUD_HEIGHT - text_height) // 2
-        self._draw_lives(HUD_MARGIN, y, state.lives)
+        y: int = (level.window_layout.offset_y - HUD_HEIGHT +
+                  (HUD_HEIGHT - text_height) // 2)
+        maze_width: int = len(level.grid[0]) * level.tile
+        hud_width: int = max(maze_width, HUD_MIN_WIDTH)
+        left: int = (self._window.width - hud_width) // 2
+        self._draw_lives(left, y, state.lives)
         items: list[tuple[str, Color]] = hud_items(state)
         for i, (text, color) in enumerate(items):
-            x: int = HUD_MARGIN + (i + 1) * HUD_COLUMN_WIDTH
+            x: int = left + (i + 1) * hud_width // HUD_SLOTS
             self._window.put_text(x, y, text, color)
 
     def _draw_lives(self, x: int, y: int, lives: int) -> None:

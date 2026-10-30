@@ -87,8 +87,8 @@ def test_screens_never_build_images_while_drawing(
     screens.draw_highscores(scores(10))
     screens.draw_transition(1, 10)
     screens.draw_pause(0)
-    screens.draw_game_end(500, True, NameEntry('GM'), True, 'error')
-    screens.draw_game_end(500, False, NameEntry(), False, '')
+    screens.draw_game_end(500, True, NameEntry('GM'), 'error')
+    screens.draw_game_end(500, False, NameEntry(), '')
 
     assert calls == []
 
@@ -172,7 +172,7 @@ def test_end_screen_asks_for_a_name_and_shows_errors(
     window: Window, texts: list[Text],
 ) -> None:
     Screens(window, make_config()).draw_game_end(
-        500, False, NameEntry('GM'), True, 'Bad name',
+        500, False, NameEntry('GM'), 'Bad name',
     )
     shown = strings(texts)
 
@@ -181,16 +181,16 @@ def test_end_screen_asks_for_a_name_and_shows_errors(
     assert colour_of(texts, 'Bad name') == ERROR_COLOR
 
 
-def test_end_screen_explains_a_score_outside_the_top_ten(
+def test_victory_screen_also_asks_for_a_name(
     window: Window, texts: list[Text],
 ) -> None:
-    Screens(window, make_config()).draw_game_end(
-        5, True, NameEntry(), False, '',
-    )
+    Screens(window, make_config()).draw_game_end(5, True, NameEntry(), '')
     shown = strings(texts)
 
-    assert "Your score didn't qualify for the top 10." in shown
-    assert not any(text.endswith('_') for text in shown)
+    assert 'Final score: 5' in shown
+    assert 'Enter your name:' in shown
+    assert '_' in shown
+    assert colour_of(texts, 'Enter: Save    Esc: Cancel') == HINT_COLOR
 
 
 def started(window: Window, state: FakeState) -> App:
