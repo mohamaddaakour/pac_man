@@ -12,6 +12,9 @@ from pacman.entities import (
 # At junctions, 70% selects the chase branch; random picks may also be best.
 CHASE_CHANCE = 0.70
 
+# Read the direction offsets once instead of resolving properties per tile.
+STEPS = tuple(direction.value for direction in Direction)
+
 
 # BFS implementation
 def distance_map(grid: Grid, goal: Position) -> dict[Position, int]:
@@ -21,14 +24,19 @@ def distance_map(grid: Grid, goal: Position) -> dict[Position, int]:
 
     distances = {goal: 0}
     queue = deque([goal])
+    rows = len(grid)
 
     while queue:
         row, col = queue.popleft()
-        for direction in Direction:
-            neighbor = row + direction.dr, col + direction.dc
+        next_distance = distances[(row, col)] + 1
+        for dr, dc in STEPS:
+            nr, nc = row + dr, col + dc
+            if not (0 <= nr < rows and 0 <= nc < len(grid[nr])):
+                continue
+            neighbor = (nr, nc)
 
-            if neighbor not in distances and is_walkable(grid, neighbor):
-                distances[neighbor] = distances[(row, col)] + 1
+            if neighbor not in distances and grid[nr][nc] == 0:
+                distances[neighbor] = next_distance
                 queue.append(neighbor)
 
     return distances

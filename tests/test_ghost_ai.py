@@ -18,6 +18,21 @@ def test_bfs_distances_and_invalid_goal() -> None:
     assert distance_map(grid, (0, 0)) == {}
 
 
+def test_bfs_open_edges_do_not_wrap_to_disconnected_floor() -> None:
+    grid = [[0, 1, 0], [0, 1, 0]]
+    assert distance_map(grid, (0, 0)) == {(0, 0): 0, (1, 0): 1}
+
+
+def test_bfs_handles_empty_and_uneven_rows() -> None:
+    assert distance_map([], (0, 0)) == {}
+    assert distance_map([[]], (0, 0)) == {}
+    assert distance_map([[0, 0], [0], []], (0, 1)) == {
+        (0, 1): 0, (0, 0): 1, (1, 0): 2,
+    }
+    assert distance_map([[0]], (-1, 0)) == {}
+    assert distance_map([[0]], (0, 1)) == {}
+
+
 def test_chasing_ghost_reaches_player() -> None:
     """Repeated best moves reach the target on an open grid."""
     grid = open_grid()
