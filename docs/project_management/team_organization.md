@@ -31,13 +31,12 @@
 
 ## Open questions
 
-- Location of the highscore file in the packaged game (task B9).
-
-The other questions were settled during integration (see the decision log).
+None. The last one, where the packaged game saves its scores, was settled in
+B9: next to `config.json`, beside `run.sh` (see the decision log).
 
 ## Blocking points
 
 | Date | Problem | Resolution |
 | --- | --- | --- |
 | 2026-10-07 | MLX42's Python binding is incomplete (no key hook, close hook or text function) | Switched to pygame (see decision log) |
-| 2026-10-29 | 99×99 mazes stutter: the ghosts' BFS (`distance_map`) takes about 49 ms each time Pac-Man enters a tile, over the 16.7 ms frame | Numbers sent to Dev A; a BFS that reads the direction offsets once takes 12 ms (open) |
+| 2026-10-29 | 99×99 mazes stutter: the ghosts' BFS (`distance_map`) takes about 49 ms each time Pac-Man enters a tile, over the 16.7 ms frame | Fixed by Dev A in `7aca6f7` (on `main`): about 12.6 ms, within the frame |

@@ -29,7 +29,7 @@ Status: Not started, In progress, In review (pull request open), Done (merged in
 | B7. Entry point | Dev B | TBD | 2026-10-23 | 2026-10-29 | Done | 15 unit tests; `make run` launches the graphical game |
 | B8. Integration with the core | Dev A + Dev B | TBD | 2026-10-29 | 2026-10-30 | Done | Real-display acceptance passed (see `acceptance.md`); 9 integration tests; `configs/` for manual checks |
 | B9. Packaging and itch.io | Dev B | TBD | 2026-10-30 | 2026-11-05 | Done | `make package` builds `dist/pac-man-linux.tar.gz`; full game played in a bare `ubuntu:22.04` container; uploaded to itch.io (restricted page), downloaded and played on another machine (see `acceptance.md`) |
-| B10. Tests and README (frontend sections) | Dev B | TBD | | | Not started | |
+| B10. Tests and README (frontend sections) | Dev B | TBD | 2026-11-05 | 2026-11-05 | Done | Frontend README sections: controls, MLX equivalence table, UI architecture, frontend decisions; frontend tests written with each task (354 tests in the full suite) |
 | Project management documents | Dev A + Dev B | TBD | 2026-10-08 | | In progress | |
 
 
