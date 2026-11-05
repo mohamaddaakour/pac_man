@@ -22,13 +22,13 @@ Status: Not started, In progress, In review (pull request open), Done (merged in
 | Frontend file skeleton | Dev B | TBD | 2026-10-08 | 2026-10-08 | Done | |
 | B1. pygame window wrapper | Dev B | TBD | 2026-10-08 | 2026-10-12 | Done | 16 unit tests, `tools/window_demo.py` |
 | B2. Sprites and tile rendering | Dev B | TBD | 2026-10-13 | 2026-10-19 | Done | 45 unit tests, `tools/render_demo.py` |
-| B3. HUD | Dev B | TBD | 2026-10-20 | | In review | 12 unit tests; branch `feature/graphical-app` |
-| B4. Input | Dev B | TBD | 2026-10-20 | | In review | 40 unit tests; branch `feature/graphical-app` |
-| B5. App state machine | Dev B | TBD | 2026-10-21 | | In review | 26 unit tests; branch `feature/graphical-app` |
-| B6. Screens | Dev B | TBD | 2026-10-22 | | In review | 18 unit tests; branch `feature/graphical-app` |
-| B7. Entry point | Dev B | TBD | 2026-10-23 | | In review | 15 unit tests; `make run` launches the graphical game |
-| B8. Integration with the core | Dev A + Dev B | TBD | 2026-10-29 | | In review | Real-display acceptance passed (see `acceptance.md`); 9 integration tests; `configs/` for manual checks |
-| B9. Packaging and itch.io | Dev B | TBD | 2026-10-30 | | In progress | `make package` rebuilds the archive from a fresh copy; full game played in a bare `ubuntu:22.04` container; itch.io upload pending |
+| B3. HUD | Dev B | TBD | 2026-10-20 | 2026-10-20 | Done | 12 unit tests; branch `feature/graphical-app` |
+| B4. Input | Dev B | TBD | 2026-10-20 | 2026-10-21 | Done | 40 unit tests; branch `feature/graphical-app` |
+| B5. App state machine | Dev B | TBD | 2026-10-21 | 2026-10-22 | Done | 26 unit tests; branch `feature/graphical-app` |
+| B6. Screens | Dev B | TBD | 2026-10-22 | 2026-10-23 | Done | 18 unit tests; branch `feature/graphical-app` |
+| B7. Entry point | Dev B | TBD | 2026-10-23 | 2026-10-29 | Done | 15 unit tests; `make run` launches the graphical game |
+| B8. Integration with the core | Dev A + Dev B | TBD | 2026-10-29 | 2026-10-30 | Done | Real-display acceptance passed (see `acceptance.md`); 9 integration tests; `configs/` for manual checks |
+| B9. Packaging and itch.io | Dev B | TBD | 2026-10-30 | 2026-11-05 | Done | `make package` builds `dist/pac-man-linux.tar.gz`; full game played in a bare `ubuntu:22.04` container; uploaded to itch.io (restricted page), downloaded and played on another machine (see `acceptance.md`) |
 | B10. Tests and README (frontend sections) | Dev B | TBD | | | Not started | |
 | Project management documents | Dev A + Dev B | TBD | 2026-10-08 | | In progress | |
 

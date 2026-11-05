@@ -134,3 +134,36 @@ Items 1–3 are covered by this record. Item 4 was checked from source
 the default 90 s timer was kept, and `configs/` provides longer timers for
 review. Item 6 (packaging and itch.io) is task B9. Item 7 (joint review of
 each other's modules) is planned before the defense.
+
+## Package acceptance — Dev B, 2026-11-05
+
+The Linux package (`make package`, which builds `dist/pac-man-linux.tar.gz`,
+about 30 MB) was checked on the build machine, in a bare `ubuntu:22.04`
+container with no Python or pygame, and from the itch.io page on another
+machine. Every check passed.
+
+| Check | Where | Result |
+| --- | --- | --- |
+| `make package` in a fresh copy builds the folder and the archive in about 10 s | build machine | Passed |
+| A Python without pygame stops the build before anything is deleted ("Error: missing build dependencies, run make install", exit 1) | build machine | Passed |
+| `package.sh` started from another folder deletes only the project's `build/` and `dist/` | build machine | Passed |
+| Archive: `run.sh` is executable; config, instructions and credits match the sources; no score file; no second copy of the game | `dist/` | Passed |
+| Extracted as root with no ownership errors | container | Passed |
+| `run.sh` without a display: "Error: cannot open the game window: no display found" | container | Passed |
+| Full game with `sh run.sh` from another folder (ten levels with K, a name typed, Exit): exit 0, score saved next to `config.json` | container (Xvfb) | Passed |
+| Read-only package folder, as a normal user: the end screen shows "Could not save highscores: … Permission denied", Esc returns to the menu, exit 0, no score file | container (Xvfb) | Passed |
+| Restricted itch.io page: downloaded, extracted and played on another machine | itch.io | Passed |
+
+### Automated checks
+
+`tests/test_packaging.py` (5 tests): the spec builds `pac-man.py` into a
+folder without UPX; the launcher is executable, uses the config next to it
+from any folder, passes the player's config, and restores a lost executable
+bit. Full suite: **354 passed**; flake8 and mypy `--strict` clean.
+
+### Remaining items
+
+Items 4 and 6 of the list above are now closed. Dev A's BFS optimisation
+(`7aca6f7`) is on `main` but not in the uploaded build: after the merge, run
+`make package` again and upload the new archive. Item 7 (joint review) is
+still planned before the defense.
