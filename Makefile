@@ -1,5 +1,4 @@
 .PHONY: install run demo graphical-demo test debug clean lint lint-strict package
-# Use the project environment when available; allow PYTHON=... overrides.
 PYTHON ?= $(if $(wildcard .venv/bin/python),.venv/bin/python,python3)
 CONFIG ?= config.json
 
@@ -8,15 +7,6 @@ install:
 
 run:
 	$(PYTHON) pac-man.py $(CONFIG)
-
-demo:
-	$(PYTHON) -m tools.cli_demo $(CONFIG)
-
-graphical-demo:
-	$(PYTHON) -m tools.graphical_demo $(CONFIG)
-
-test:
-	$(PYTHON) -m pytest -q tests
 
 debug:
 	$(PYTHON) -m pdb pac-man.py $(CONFIG)

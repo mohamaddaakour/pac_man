@@ -3,7 +3,7 @@
 import sys
 from pacman.config import Config, ConfigError, load_config
 from pacman.highscore import Highscores
-from tools.session import load_highscores
+from frontend.session import load_highscores
 
 
 def _run(argv: list[str]) -> int:

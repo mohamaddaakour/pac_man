@@ -5,8 +5,7 @@
 A Pac-Man game written in Python 3.10+. Play a campaign of at least ten
 generated mazes in a pygame window that uses only MLX-equivalent calls, with a
 main menu, instructions, a pause menu, and a persistent top-ten highscore table.
-A terminal version of the same core is kept for testing, and a standalone Linux
-build is published on itch.io.
+A standalone Linux build is published on itch.io.
 
 ## Description
 
@@ -81,14 +80,6 @@ level 99×99), and `shapes.json` (5×5, 99×5, 5×99, and 99×99 mazes).
 
 WASD is read by key position, so AZERTY keyboards use ZQSD. The Instructions
 screen lists the controls and the values loaded from the config.
-
-### Other launchers
-
-```bash
-make demo                            # terminal version (python -m tools.cli_demo config.json)
-python -m pacman.main config.json    # the same terminal version
-make graphical-demo                  # earlier graphical demo of the core
-```
 
 ### Linux package
 
@@ -402,8 +393,6 @@ Core (`pacman/`, Dev A):
 - pacman/levels.py expands the campaign; pacman/game_state.py owns all game rules.
 - pacman/highscore.py owns validation, ranking, and atomic persistence.
 - tools/session.py resolves score storage and formats score tables.
-- tools/cli_demo.py is the terminal version; tools/graphical_demo.py is an
-  earlier graphical demo of the core.
 
 See [the core API contract](docs/core-api.md) for the frontend handoff. Rendering
 reads state; it never removes pellets, awards points, or advances timers itself.
