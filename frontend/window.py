@@ -145,7 +145,7 @@ class Window:
         Like reading the size of the image mlx_put_string returns.
         """
         text_surface: pygame.Surface = self._font.render(
-            text, False, pygame.Color('white')
+            text, False, (255, 255, 255)
         )
         return text_surface.get_size()
 
