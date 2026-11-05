@@ -27,6 +27,7 @@
 | 2026-10-16 | Cheats: I toggles invisibility, K skips a level | Lets a reviewer reach every level and screen quickly (subject VI.5) | Dev A + Dev B |
 | 2026-10-30 | The name prompt is shown after every game; a score outside the top 10 is not saved | The subject's game over and victory screens always prompt for a name | Dev A + Dev B |
 | 2026-10-30 | The maze's 42 pattern is drawn in its own colour; ghosts always have eyes; the HUD sits right above the maze | Makes the generator's 42 visible and keeps the HUD aligned for every maze shape | Dev B |
+| 2026-11-05 | Linux package: a PyInstaller folder (onedir) in a `tar.gz`, with `run.sh`, `config.json`, `INSTRUCTIONS.txt` and `CREDITS.txt` next to it; pygame and PyInstaller versions pinned | Starts instantly (no unpacking at launch), players can edit the config and scores are saved next to it, `tar.gz` keeps the executable bits, and pinned versions rebuild the same package during the review | Dev B |
 
 ## Open questions
 

@@ -28,7 +28,7 @@ Status: Not started, In progress, In review (pull request open), Done (merged in
 | B6. Screens | Dev B | TBD | 2026-10-22 | | In review | 18 unit tests; branch `feature/graphical-app` |
 | B7. Entry point | Dev B | TBD | 2026-10-23 | | In review | 15 unit tests; `make run` launches the graphical game |
 | B8. Integration with the core | Dev A + Dev B | TBD | 2026-10-29 | | In review | Real-display acceptance passed (see `acceptance.md`); 9 integration tests; `configs/` for manual checks |
-| B9. Packaging and itch.io | Dev B | TBD | | | Not started | |
+| B9. Packaging and itch.io | Dev B | TBD | 2026-10-30 | | In progress | `make package` rebuilds the archive from a fresh copy; full game played in a bare `ubuntu:22.04` container; itch.io upload pending |
 | B10. Tests and README (frontend sections) | Dev B | TBD | | | Not started | |
 | Project management documents | Dev A + Dev B | TBD | 2026-10-08 | | In progress | |
 

@@ -1,0 +1,87 @@
+PAC-MAN - LINUX VERSION
+
+REQUIREMENTS
+- 64-bit (x86_64) Linux with glibc 2.35 or newer, such as Ubuntu 22.04
+  or newer.
+- A graphical desktop session (X11, or Wayland with XWayland).
+- Nothing to install: Python and pygame are included.
+
+HOW TO START
+1. Extract the archive:
+       tar -xzf pac-man-linux.tar.gz
+2. Start the game (this works from any folder):
+       sh pac-man-linux/run.sh
+   or, inside the pac-man-linux folder:
+       ./run.sh
+3. To play with another configuration file:
+       sh run.sh my.json
+
+GOAL
+Eat every pacgum to clear the level, then clear every level to win.
+The super-pacgums in the four corners make the ghosts edible for a few
+seconds: eat them for extra points. Touching a normal ghost, or running
+out of time, costs a life. The game ends when you clear the last level
+or lose your last life; then type your name to enter the top 10.
+The top bar shows your lives, score, level and time left (red in the
+last 10 seconds).
+
+CONTROLS
+In the menus:
+- Up / Down (or W / S): choose an item.
+- Enter: select.
+- Esc: go back; on the main menu, quit the game.
+
+While playing:
+- Arrow keys or W A S D: move. W A S D are read by their position on
+  the keyboard, so on an AZERTY keyboard use Z Q S D.
+- P or Esc: pause. The pause menu offers RESUME and MAIN MENU;
+  P or Esc again resumes.
+
+Cheats, to help reviewers:
+- I: invisibility on or off; ghosts cannot take your lives.
+- K: skip the current level (no points are awarded).
+
+At the end of a game:
+- Type a name: 1 to 10 letters, digits or spaces. Backspace erases.
+- Enter: save the score. Esc: skip.
+- Scores outside the top 10 are not saved.
+
+Closing the window quits the game at any time.
+
+CONFIGURATION
+The game reads config.json, next to run.sh, unless you give another
+file. The file is JSON with comments: # at the start of a line, and
+// or /* */ anywhere outside strings.
+
+Bad values never stop the game; each change is explained in the
+terminal. A missing value or a value of the wrong type uses the
+default, a value outside its range is set to the nearest limit, invalid
+level entries are skipped, and unknown keys are ignored.
+
+Key                       Default           Allowed values
+highscore_filename        highscores.json   any non-empty file name or path
+lives                     3                 1 to 9
+points_per_pacgum         10                0 to 10000
+points_per_super_pacgum   50                0 to 10000
+points_per_ghost          200               0 to 10000
+level_max_time            90                10 to 3600 seconds
+edible_duration           10                1 to 60 seconds
+ghost_respawn_time        5                 1 to 60 seconds
+levels                    one 15x15 level   a list of levels (see below)
+
+Each level is written {"width": 21, "height": 15, "seed": 42}:
+- width and height: 5 to 99 maze cells (default 15).
+- seed: used by the first level only (42 when omitted), so level 1 is
+  the same maze every time. Later levels are always random.
+At least 10 levels are played. If the list is shorter, the game adds
+levels, each 2 cells wider and taller than the one before, up to 21x21
+(larger mazes keep their size).
+
+HIGH SCORES
+The top 10 is saved in highscore_filename. A relative name is placed
+next to the configuration file, whatever folder you start the game from.
+
+TROUBLESHOOTING
+- "Permission denied": start the game with  sh run.sh  instead.
+- "cannot open the game window": the game needs a graphical desktop
+  session. It cannot run in a text-only console.

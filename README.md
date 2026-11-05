@@ -79,8 +79,8 @@ python3 pac-man.py config.json
 
 The filename has no required extension: `python3 pac-man.py settings.txt` also
 works when the file contains valid JSON with the supported comments.
-The current launcher runs the terminal demo; Dev B replaces it with the
-graphical application during B7.
+It opens the graphical game window. To play without Python installed, use the
+[Linux package](#linux-package).
 
 Alternative launch commands:
 
@@ -94,6 +94,60 @@ python -m pacman.main config.json
 # Graphical menu and campaign
 make graphical-demo
 ```
+
+## Linux package
+
+The game can be packaged as a standalone Linux build that runs without Python.
+
+### Build
+
+```bash
+make install    # installs PyInstaller with the other requirements
+make package
+```
+
+`make package` runs `package.sh`. The script deletes any old `build/` and
+`dist/` folders, builds the game with PyInstaller from `pac-man.spec`, and
+assembles the package. It takes about 10 seconds.
+
+### Output
+
+| Path | Content |
+| --- | --- |
+| `dist/pac-man-linux.tar.gz` | The archive to share or upload (about 30 MB) |
+| `dist/pac-man-linux/` | The same package, already extracted |
+
+```
+pac-man-linux/
+├── run.sh            launcher
+├── config.json       editable settings; scores are saved next to it
+├── INSTRUCTIONS.txt  controls, options and configuration keys
+├── CREDITS.txt       authors and licences
+└── pac-man/          the game, with Python and pygame included
+```
+
+### Launch
+
+```bash
+tar -xzf pac-man-linux.tar.gz
+cd pac-man-linux
+sh run.sh             # plays with config.json from this folder
+sh run.sh my.json     # or with another configuration file
+```
+
+`run.sh` works from any folder. Scores are saved in `highscores.json` next to
+the configuration file.
+
+### Requirements
+
+- 64-bit (x86_64) Linux with glibc 2.35 or newer, such as Ubuntu 22.04 or newer.
+- A graphical desktop session: X11, or Wayland with XWayland (Ubuntu's default).
+- No Python, pygame or other installation is needed.
+
+The package is built on Ubuntu 22.04. A PyInstaller build runs only on systems
+whose glibc is at least as new as the build machine's, so build on the oldest
+system you want to support. The package was tested by playing a full game in a
+bare `ubuntu:22.04` container with no Python installed.
 
 ## Movement controls and scoring
 
