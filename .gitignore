@@ -6,6 +6,4 @@ __pycache__/
 build/
 dist/
 highscores.json
-
-subject.md
-roadmap/
+venv/
