@@ -7,7 +7,21 @@ from typing import Callable, Literal
 
 import pygame
 
+KEY_ENTER: int = pygame.K_RETURN
+KEY_KP_ENTER: int = pygame.K_KP_ENTER
 KEY_ESCAPE: int = pygame.K_ESCAPE
+KEY_BACKSPACE: int = pygame.K_BACKSPACE
+KEY_UP: int = pygame.K_UP
+KEY_DOWN: int = pygame.K_DOWN
+KEY_LEFT: int = pygame.K_LEFT
+KEY_RIGHT: int = pygame.K_RIGHT
+KEY_P: int = pygame.K_p
+KEY_I: int = pygame.K_i
+KEY_K: int = pygame.K_k
+SCAN_W: int = pygame.KSCAN_W
+SCAN_A: int = pygame.KSCAN_A
+SCAN_S: int = pygame.KSCAN_S
+SCAN_D: int = pygame.KSCAN_D
 
 
 class GraphicsError(Exception):
@@ -75,7 +89,7 @@ class Window:
             except pygame.error as exc:
                 raise GraphicsError(exc) from exc
             pygame.display.set_caption(self.title)
-            self.font: pygame.font.Font = pygame.font.Font(None, 24)
+            self._font: pygame.font.Font = pygame.font.Font(None, 24)
             self.closed: bool = False
             self.key_callback: Callable[[KeyEvent], None] | None = None
             self.close_callback: Callable[[], None] | None = None
@@ -83,6 +97,10 @@ class Window:
         except Exception:
             pygame.quit()
             raise
+
+    def set_key_repeat(self, delay: int, interval: int) -> None:
+        """Repeat a held key after `delay` ms, every `interval` ms."""
+        pygame.key.set_repeat(delay, interval)
 
     def new_image(self, width: int, height: int, opaque: bool) -> Image:
         """Create an image whose pixels live in a bytearray (4 bytes each).
@@ -119,7 +137,32 @@ class Window:
     def put_text(self, x: int, y: int, text: str, color: tuple[int, ...]
                  ) -> None:
         """Draw `text` in `color` with its top-left corner at (x, y)."""
-        self.screen.blit(self.font.render(text, False, color), (x, y))
+        self.screen.blit(self._font.render(text, False, color), (x, y))
+
+    def text_size(self, text: str) -> tuple[int, int]:
+        """Return the (width, height) of `text` once drawn.
+
+        Like reading the size of the image mlx_put_string returns.
+        """
+        text_surface: pygame.Surface = self._font.render(
+            text, False, (255, 255, 255)
+        )
+        return text_surface.get_size()
+
+    def text_pixels(self,
+                    text: str,
+                    color: tuple[int, ...]) -> tuple[bytes, int, int]:
+        """Return the RGBA pixels, width and height of drawn `text`.
+
+        Like reading the pixels of the image mlx_put_string returns.
+        """
+        surface: pygame.Surface = self._font.render(
+           text, False, color
+        )
+        return (
+           pygame.image.tobytes(surface, "RGBA"),
+           *surface.get_size()
+        )
 
     def on_key(self, cb: Callable[[KeyEvent], None]) -> None:
         """Call `cb` with a KeyEvent for every key press."""

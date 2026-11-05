@@ -1,4 +1,4 @@
-.PHONY: install run demo graphical-demo test debug clean lint lint-strict
+.PHONY: install run demo graphical-demo test debug clean lint lint-strict package
 # Use the project environment when available; allow PYTHON=... overrides.
 PYTHON ?= $(if $(wildcard .venv/bin/python),.venv/bin/python,python3)
 CONFIG ?= config.json
@@ -7,7 +7,7 @@ install:
 	$(PYTHON) -m pip install -r requirements.txt
 
 run:
-	$(PYTHON) -m pacman.main $(CONFIG)
+	$(PYTHON) pac-man.py $(CONFIG)
 
 demo:
 	$(PYTHON) -m tools.cli_demo $(CONFIG)
@@ -19,10 +19,13 @@ test:
 	$(PYTHON) -m pytest -q tests
 
 debug:
-	$(PYTHON) -m pdb -m pacman.main $(CONFIG)
+	$(PYTHON) -m pdb pac-man.py $(CONFIG)
 
 clean:
 	find . -type d \( -name __pycache__ -o -name .mypy_cache -o -name .pytest_cache \) -prune -exec rm -rf {} +
+
+package:
+	PYTHON="$(PYTHON)" ./package.sh
 
 lint:
 	$(PYTHON) -m flake8 .

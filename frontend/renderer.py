@@ -1,5 +1,6 @@
 """Draw the maze, dots, sprites and HUD for each frame."""
 
+import math
 from dataclasses import dataclass, replace
 from frontend.window import Window, Image
 from frontend.layout import Layout, compute_layout, to_pixels
@@ -7,9 +8,16 @@ from frontend.sprites import disc, pacman, ghost, eyes
 from frontend.protocols import GameStateProtocol
 from frontend.constants import (Color,
                                 HUD_HEIGHT,
+                                HUD_TEXT_COLOR,
+                                HUD_CHEAT_COLOR,
+                                HUD_WARNING_COLOR,
+                                HUD_SLOTS,
+                                HUD_MIN_WIDTH,
+                                ICON_SIZE,
                                 MAX_TILE,
                                 BACKGROUND_COLOR,
                                 WALL_COLOR,
+                                PATTERN_COLOR_42,
                                 CORRIDOR_COLOR,
                                 PACGUM_COLOR,
                                 SUPER_PACGUM_COLOR,
@@ -20,8 +28,57 @@ from frontend.constants import (Color,
                                 SUPER_PACGUM_RADIUS,
                                 MOUTH_PERIOD,
                                 BLINK_START,
-                                BLINK_PERIOD)
+                                BLINK_PERIOD,
+                                WARNING_THRESHOLD)
 from pacman.entities import Direction, GhostState, Grid, Position
+
+
+def hud_items(state: GameStateProtocol) -> list[tuple[str, Color]]:
+    """Return the HUD texts and their colours, left to right.
+
+    The time is rounded up so 0 only shows at the real timeout, and
+    it turns to the warning colour in the last seconds. INVISIBLE
+    is only listed while the cheat is on. Lives are drawn apart.
+    """
+    items: list[tuple[str, Color]] = [
+        (f"SCORE {state.score}", HUD_TEXT_COLOR),
+        (f"LEVEL {state.level}/{state.total_levels}", HUD_TEXT_COLOR),
+        (f"TIME {math.ceil(state.time_left)}",
+         (HUD_WARNING_COLOR
+          if state.time_left <= WARNING_THRESHOLD
+          else HUD_TEXT_COLOR)),
+    ]
+    if state.invisible:
+        items.append(("INVISIBLE", HUD_CHEAT_COLOR))
+    return items
+
+
+def pattern_42_tiles(grid: Grid) -> set[Position]:
+    """Return the wall tiles that form the maze's 42 pattern.
+
+    They are the walls surrounded by walls on all eight sides; tiles
+    outside the grid count as open, so the border is never included.
+    Any other wall touches a corridor, because the middle of every open
+    cell is one.
+    """
+    rows: int = len(grid)
+    cols: int = len(grid[0])
+    result: set[Position] = set()
+    for row in range(rows):
+        for col in range(cols):
+            if not grid[row][col]:
+                continue
+            surrounded: bool = all(
+                0 <= row + dr < rows
+                and 0 <= col + dc < cols
+                and grid[row + dr][col + dc]
+                for dr in (-1, 0, 1)
+                for dc in (-1, 0, 1)
+                if dr != 0 or dc != 0
+            )
+            if surrounded:
+                result.add((row, col))
+    return result
 
 
 @dataclass
@@ -54,6 +111,15 @@ class Renderer:
         self._clock: float = 0.0
         self._last_direction: Direction = Direction.RIGHT
         self._level: _Level | None = None
+        self._life_icon: Image = self._window.new_image(
+            ICON_SIZE, ICON_SIZE, False)
+        self._life_icon.pixels[:] = pacman(ICON_SIZE, Direction.RIGHT, True)
+
+    def reset(self) -> None:
+        """Forget the level and the animations, for a new game."""
+        self._clock = 0.0
+        self._last_direction = Direction.RIGHT
+        self._level = None
 
     def _put_tile(self,
                   background: Image,
@@ -116,8 +182,9 @@ class Renderer:
     def build_level(self, state: GameStateProtocol) -> None:
         """Compute the layout, then build the background and the sprites.
 
-        The background holds the walls, the corridors and the dots, so a
-        frame only draws one large image and five sprites.
+        The background holds the walls (the 42 pattern in its own
+        colour), the corridors and the dots, so a frame only draws one
+        large image, the ghosts with their eyes, and Pac-Man.
         """
         rows, cols = len(state.grid), len(state.grid[0])
         old_layout: Layout = compute_layout(rows,
@@ -131,6 +198,8 @@ class Renderer:
         grid: Grid = state.grid
         tile: int = window_layout.tile
         wall: bytes = self._solid_tile(tile, WALL_COLOR)
+        pattern_42: bytes = self._solid_tile(tile, PATTERN_COLOR_42)
+        special_42_tiles: set[Position] = pattern_42_tiles(grid)
         corridor: bytes = self._solid_tile(tile, CORRIDOR_COLOR)
         pacgum_on_corridor: bytes = self._make_pacgum_tile(
             tile,
@@ -146,7 +215,10 @@ class Renderer:
         for row in range(rows):
             for col in range(cols):
                 if state.grid[row][col]:
-                    self._put_tile(background, tile, row, col, wall)
+                    tile_pattern: bytes = (
+                        pattern_42 if (row, col) in special_42_tiles else wall
+                    )
+                    self._put_tile(background, tile, row, col, tile_pattern)
                 elif (row, col) in state.super_pacgums:
                     self._put_tile(
                         background, tile, row, col, super_pacgum_on_corridor)
@@ -226,7 +298,7 @@ class Renderer:
         self._window.put_image(level.background, x, y)
         for index, _ghost in enumerate(state.ghosts):
             if _ghost.state == GhostState.EATEN:
-                image: Image = level.eyes_image
+                image: Image | None = None
             elif _ghost.state == GhostState.EDIBLE:
                 blinking: bool = (state.edible_timer < BLINK_START
                                   and int(
@@ -239,7 +311,9 @@ class Renderer:
             else:
                 raise ValueError("invalid ghost state")
             x, y = to_pixels(level.window_layout, _ghost.pos)
-            self._window.put_image(image, x, y)
+            if image is not None:
+                self._window.put_image(image, x, y)
+            self._window.put_image(level.eyes_image, x, y)
         direction: Direction | None = state.player.direction
         mouth_open: bool = True
         if direction is not None:
@@ -249,3 +323,38 @@ class Renderer:
         x, y = to_pixels(level.window_layout, state.player.pos)
         self._window.put_image(level.pacman_images[
             (self._last_direction, mouth_open)], x, y)
+        self._draw_hud(state, level)
+
+    def _draw_hud(self, state: GameStateProtocol, level: _Level) -> None:
+        """Draw the lives and the HUD items in fixed slots above the maze.
+
+        The HUD spans the maze width, or HUD_MIN_WIDTH when the maze is
+        narrower, centred like the maze. INVISIBLE keeps its own slot, so
+        the other items never move.
+        """
+        _, text_height = self._window.text_size("LIVES:")
+        y: int = (level.window_layout.offset_y - HUD_HEIGHT +
+                  (HUD_HEIGHT - text_height) // 2)
+        maze_width: int = len(level.grid[0]) * level.tile
+        hud_width: int = max(maze_width, HUD_MIN_WIDTH)
+        left: int = (self._window.width - hud_width) // 2
+        self._draw_lives(left, y, state.lives)
+        items: list[tuple[str, Color]] = hud_items(state)
+        for i, (text, color) in enumerate(items):
+            x: int = left + (i + 1) * hud_width // HUD_SLOTS
+            self._window.put_text(x, y, text, color)
+
+    def _draw_lives(self, x: int, y: int, lives: int) -> None:
+        """Draw the lives as a label, a Pac-Man icon and a count."""
+        color: Color = HUD_TEXT_COLOR
+        label: str = "LIVES:"
+        label_width: int = self._window.text_size(label)[0]
+        label_height: int = self._window.text_size(label)[1]
+        icon_offset: int = (label_height - self._life_icon.height) // 2 - 3
+        self._window.put_text(x, y, label, color)
+        self._window.put_image(self._life_icon,
+                               x + label_width + 10,
+                               y + icon_offset)
+        self._window.put_text(x + label_width + 30,
+                              y,
+                              f"x {lives}", color)

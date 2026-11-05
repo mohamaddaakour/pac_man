@@ -86,7 +86,10 @@ def ghost(size: int, color: Color) -> bytes:
 
 
 def eyes(size: int) -> bytes:
-    """Return RGBA pixels of two eyes, the look of an eaten ghost."""
+    """Return RGBA pixels of two eyes, drawn over every ghost.
+
+    An eaten ghost shows only its eyes.
+    """
     pixels: bytearray = bytearray((size ** 2) * 4)
     center: float = (size - 1) / 2
     eye_y: float = (2 * size) / 5
@@ -116,3 +119,20 @@ def eyes(size: int) -> bytes:
                 pixels[index + i] = EYES_COLOR[i]
             pixels[index + 3] = 255
     return bytes(pixels)
+
+
+def scale_up(pixels: bytes, width: int, height: int, factor: int) -> bytes:
+    """Return the RGBA image `factor` times bigger.
+
+    Each pixel becomes a factor x factor block (nearest neighbour).
+    """
+    output_buffer: bytearray = bytearray(height * width * (factor ** 2) * 4)
+    for y in range(height * factor):
+        for x in range(width * factor):
+            source_x: int = x // factor
+            source_y: int = y // factor
+            source_index: int = (source_y * width + source_x) * 4
+            output_index: int = (y * width * factor + x) * 4
+            for i in range(4):
+                output_buffer[output_index + i] = pixels[source_index + i]
+    return bytes(output_buffer)

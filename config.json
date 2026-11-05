@@ -1,5 +1,5 @@
 # Pac-Man configuration.  Lines starting with # or // are comments.
-// hello world
+// hello Pac-Man fans
 {
     // Where the top-10 is stored.
     "highscore_filename": "highscores.json",
