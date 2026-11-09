@@ -10,9 +10,10 @@ import json
 
 Report = Callable[[str], None]
 
-
+# Custom exception for configuration errors
 class ConfigError(Exception):
     """The config file is missing, unreadable, or not a JSON object."""
+    pass
 
 
 @dataclass(frozen=True)

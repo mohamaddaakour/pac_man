@@ -89,11 +89,15 @@ def choose_direction(
         """Look up the BFS distance at a candidate destination."""
         return distances[(row + direction.dr, col + direction.dc)]
 
+    # Choose the best candidate based on the ghost's state.
+    # Edible ghosts prefer the furthest tile, while others prefer the nearest.
     if ghost.state == GhostState.EDIBLE:
         return max(candidates, key=distance)
 
+    # Normal ghosts prefer the nearest tile, but may choose randomly at junctions.
     best = min(candidates, key=distance)
 
+    # If at a junction, consider random movement 70% of the time, but only if there are multiple candidates.
     if len(neighbors) >= 3 and len(candidates) > 1:
         if rng.random() >= CHASE_CHANCE:
             # Choose randomly

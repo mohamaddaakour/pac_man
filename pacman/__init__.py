@@ -1,1 +1,1 @@
-"""Terminal tools for inspecting and playing the game core."""
+"""Tools for inspecting and playing the game core."""
