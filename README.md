@@ -160,7 +160,7 @@ tests and [the acceptance record](docs/project_management/acceptance.md) for
 results. The frontend tests run without a display (see
 [Frontend decisions](#frontend-decisions)).
 
-## Maze generation and spawns
+## Maze Generation
 
 `pacman/maze_adapter.py` uses the assigned
 `mazegenerator-2.1.0` package without changing its code.
@@ -360,7 +360,7 @@ Booleans are not accepted as numeric values. Absolute score paths are honored;
 relative paths are resolved beside the supplied config file, independent of the
 launch directory. The core keeps Config immutable when expanding the campaign.
 
-## Highscores
+## Highscore
 
 Highscores keeps at most ten [name, score] pairs in a JSON list, sorted by score
 in descending order. Scores must be non-negative integers, excluding booleans.
@@ -382,7 +382,7 @@ its highscores screen; a save error is shown on the end screen.
 The manager is intended for a single running application; simultaneous writers
 are not coordinated with a file lock.
 
-## General software architecture
+## General Software Architecture
 
 Core (`pacman/`, Dev A):
 
@@ -554,7 +554,7 @@ Packaging:
   22.04 so it runs on glibc 2.35 or newer, and the pinned versions rebuild the
   same package during the review.
 
-## Project management
+## Project Management
 
 The work was split in two halves: Dev A (mdaakour) built the game core and
 persistence, and Dev B (gmoujaes) the graphical frontend and the Linux package.
